@@ -279,16 +279,16 @@
                                     <p class="text-justify">The Arduino IDE was installed on the Linux virtual machine, and it enables communication between the Arduino and base computer.  This allows us to upload code that runs in a continuous loop on the microcontroller.</p>
                                     <h5>Part 3</h5>
                                     <p class="text-justify">After uploading “Example: Blink it Up,” the Arduino flashes its light on and off at 1-second intervals.  This works by initializing the LED pin and cycling it from high to low every 1000 milliseconds. Part 3 functionality is demonstrated below:</p>
-                                    <iframe width="560" height="315" src="https://www.youtube.com/embed/ANt5K8xz80E" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/ANt5K8xz80E" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <h5>Part 4</h5>
                                     <p class="text-justify">The “Example2_Serial” code allowed us to practice reading data from the serial monitor.  This sketch included printing text and reading user input in the serial monitor.  Part 4 functionality is demonstrated below:</p>
-                                    <iframe width="560" height="315" src="https://www.youtube.com/embed/OKOudbtPi8s" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/OKOudbtPi8s" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <h5>Part 5</h5>
                                     <p class="text-justify">“Example4_analogRead” prints the voltage output of several ADC pins.  In this case, we looked at the reading of the Arduino’s internal temperature sensor.  Breathing on the Arduino after several minutes causes the Arduino’s temperate to increase, reaching up to 30°C.  Part 5 functionality is demonstrated below:</p>
-                                    <iframe width="560" height="315" src="https://www.youtube.com/embed/uAswGZtnBN8" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/uAswGZtnBN8" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <h5>Part 6</h5>
                                     <p class="text-justify">In part 6, we uploaded “Example1_MicrophoneOutput,” which included code to read and process the signal from the Arduino’s microphone.  This program performed a Fast-Fourier Transform, decomposing the signal into components of different frequencies.  In the serial monitor, the highest frequency is printed.  While I cannot whistle, I tried creating multiple different pitches, and the highest frequency that I was able to hold was about 1500 Hz.  Part 6 functionality is demonstrated below:</p>
-                                    <iframe width="560" height="315" src="https://www.youtube.com/embed/bY8NmJ5vYZI" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/bY8NmJ5vYZI" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <h5>Part 7</h5>
                                     <p class="text-justify">The sketch for part 7 involved lighting-up the Arduino’s LED when a person whistles, while powerin the board with a 3.7V LiPo battery.  This code is based on a combination of “Example1_MicrophoneOutput” and “Example: Blink it Up.”  Additional logic is added to light the LED if the highest frequency is above a threshold that represents a person’s “whistle”.  Once the threshold, set at 5000Hz, is set, the LED stays lit for 10 milliseconds and turns off.  The code was tested for multiple different sounds and was validated that the LED only lights up when a whistle (or my attempt to whistle) is made.  The following lines performed the light logic:</p>
                                     <pre><code><p class="text-left">uint32_t currentFreq = getLoudest();
@@ -300,7 +300,7 @@ delay(10);
 digitalWrite(lightPin, LOW);  
 }</p></code></pre>
                                     <p class="text-justify">Part 7 functionality is demonstrated below:</p>
-                                    <iframe width="560" height="315" src="https://www.youtube.com/embed/Q1BQJPwG38U" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/Q1BQJPwG38U" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
