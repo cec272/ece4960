@@ -333,8 +333,41 @@ digitalWrite(lightPin, LOW);
                                     </div>
                                     <!-- Portfolio Modal - Image-->
                                     <img class="img-fluid rounded mb-5" src="assets/img/portfolio/cake.png" alt="" />
-                                    <!-- Portfolio Modal - Text-->
-                                    <p class="mb-5">To be completed</p>
+                                    <h5>Objective</h5>
+                                    <p class="text-justify">The objective of this lab was to gain experience working with the Bluetooth module on the Arduino Artemis Nano.  This lab involved sending and receiving packets of data between the Arduino and base computer, reading the output, and measuring latency.  </p>
+                                    <h5>Connecting to the Artemis Board</h5>
+                                    <p class="text-justify">The bleak library was already installed on the virtual machine.  At first, I had trouble connecting the Artemis Nano with the Bluetooth module, using main.py.  I discovered that I needed to install additional USB libraries onto the virtual machine in order for USB passthrough to function.  I also disabled macOS’s Bluetooth behavior by running sudo nvram bluetoothHostControllerSwitchBehavior=never, as suggested on Campuswire.  After 3 attempts at running main.py, I received confirmation that Bluetooth connection was established.  A strange issue that causes my internal keyboard and trackpad stop working after my mac goes to sleep, started to occur, however. </p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/connectboard.png" alt="" />
+                                    <h5>Ping Your Robot</h5>
+                                    <p class="text-justify">After uncommenting await theRoboot.ping(), the program began to ‘ping-pong’ between the transmitter and receiver small amounts of data to measure the round-trip latency.  After a series of 444 pings, the average latency was 138.32 ms.  This is approximately three orders of 
+                                    magnitude higher than USB connection (link), where the average latency can equal 0.125 ms.  </p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/pinghistogram.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/pinghistogram2.png" alt="" />
+                                    <p class="text-justify">From the histogram and time history of the ping latency, some interesting observations can be made.  The latency is aggregated into 2 main blocks, between 200-240 ms, and between 120 and 140 ms.  There seems to be a sudden drop in latency after some time, and the latency settles into the lower latency state.  </p>
+                                    <h5>Request a Float</h5>
+                                    <p class="text-justify">Looking through the robot command framework, I discovered how I could format data types and send them from the Artemis Nano to the computer.  At first, I was unsuccessful, but I learned that the byte size must be 2 bytes greater than the size of the byte type, which for a float, would be a total of 6 bytes.  I sent over the float, 3.14159265354, and received a similar, but not quite exact return.  It is possible that the data is being corrupted or not parsed correctly.  </p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/requestfloat.png" alt="" />
+                                    <pre><code><p class="text-left"></p><pre><code><p class="text-left">uint32_t currentFreq = getLoudest();
+            // Light the LED if loudest frequency is above threshold
+            if (currentFreq > lightFreq)
+            {
+            digitalWrite(lightPin, HIGH);
+            delay(10);
+            digitalWrite(lightPin, LOW);  
+}</p></code></pre></code></pre>
+                                    <h5>Test the Data Rate</h5>
+                                    <p class="text-justify">Now, we modified the bytestream section of the code to include sending and receiving a series of larger packets of data (a 32-bit and 64-bit integer).  Using some data logging tools, we can see how the Bluetooth module handles this data and whether or not any packets are lost.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/dataratehisto.png" alt="" />  
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/dataratetime.png" alt="" />
+                                    <p class="text-justify">From the first test, a smaller data set of 14 bytes per package, we can see that the average latency is 108.986 ms.  40.102% of the packets were dropped, which is not a good result.</p>
+                                    <pre><code><p class="text-left"></p><pre><code><p class="text-left"><pre><code><p class="text-left"></p><pre><code><p class="text-left">uint32_t currentFreq = getLoudest();
+                    // Light the LED if loudest frequency is above threshold
+                    if (currentFreq > lightFreq)
+                    {
+                    digitalWrite(lightPin, HIGH);
+                    delay(10);
+                    digitalWrite(lightPin, LOW);  
+            }</p></code></pre></code></pre></p></code></pre></code></pre>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
