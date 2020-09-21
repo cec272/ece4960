@@ -332,7 +332,7 @@ digitalWrite(lightPin, LOW);
                                         <div class="divider-custom-line"></div>
                                     </div>
                                     <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/cake.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/arduinobluetooth.jpg" alt="" />
                                     <h5>Objective</h5>
                                     <p class="text-justify">The objective of this lab was to gain experience working with the Bluetooth module on the Arduino Artemis Nano.  This lab involved sending and receiving packets of data between the Arduino and base computer, reading the output, and measuring latency.  </p>
                                     <h5>Connecting to the Artemis Board</h5>
@@ -347,27 +347,54 @@ digitalWrite(lightPin, LOW);
                                     <h5>Request a Float</h5>
                                     <p class="text-justify">Looking through the robot command framework, I discovered how I could format data types and send them from the Artemis Nano to the computer.  At first, I was unsuccessful, but I learned that the byte size must be 2 bytes greater than the size of the byte type, which for a float, would be a total of 6 bytes.  I sent over the float, 3.14159265354, and received a similar, but not quite exact return.  It is possible that the data is being corrupted or not parsed correctly.  </p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/portfolio/requestfloat.png" alt="" />
-                                    <pre><code><p class="text-left"></p><pre><code><p class="text-left">uint32_t currentFreq = getLoudest();
-            // Light the LED if loudest frequency is above threshold
-            if (currentFreq > lightFreq)
-            {
-            digitalWrite(lightPin, HIGH);
-            delay(10);
-            digitalWrite(lightPin, LOW);  
-}</p></code></pre></code></pre>
+                                    </p><pre><code><p class="text-left">case REQ_FLOAT:
+Serial.println("Going to send a float");
+//TODO: Put a float (perhaps pi) into a command response and send it.
+res_cmd->command_type = GIVE_FLOAT;
+((float *)res_cmd->data)[0] = 3.14159265354f;
+amdtpsSendData((uint8_t *)res_cmd, 6);
+break;
+}</p></code></pre>
+                                    <p class="text-justify"> Below demonstrates the ping code running:</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/GtLQOjt960w" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <h5>Test the Data Rate</h5>
-                                    <p class="text-justify">Now, we modified the bytestream section of the code to include sending and receiving a series of larger packets of data (a 32-bit and 64-bit integer).  Using some data logging tools, we can see how the Bluetooth module handles this data and whether or not any packets are lost.</p>
+                                    <p class="text-justify">Now, we modified the bytestream section of the code to include sending and receiving a packets of data. Using some data logging tools, we can see how the Bluetooth module handles this data and whether or not any packets are lost.  I used the largest possible 32-bit integer (2^32 – 1) and the largest possible 64-bit integer (2^64 – 1) to fill these values.  The latency, found by subtracting the reported times between transmissions in the serial monitor, was averaged and plotted over time and in a histogram.  I calculated the percentage of dropped packets by comparing the total number of packets received on the computer (in the linux terminal) and the number of packets sent from the Arduino, which is reported in the serial monitor.</p>
+                                    <p class="text-justify">The code below demonstrates how data was created and packaged into a data packet.  We also used the unpack function to display this package as a human-readable decimal number.  Special attention is necessary for the byte size, as the byte size of the integers, package, and unpacked must all be the same size.</p>
+                                    </p><pre><code><p class="text-left">if (bytestream_active)
+{
+res_cmd->command_type = BYTESTREAM_TX;
+res_cmd->length = 54;
+//TODO: Put an example of a 32-bit integer and a 64-bit integer
+//for the stream. Be sure to add a corresponding case in the
+//python program.
+// Serial.printf("Stream %d \n", bytestream_active);
+uint32_t bit_32 = 2147483648;
+uint64_t bit_64 = 9223372036854775806;
+memcpy(res_cmd->data,&bit_32,4);
+memcpy(res_cmd->data+4,&bit_64,8);
+memcpy(res_cmd->data+12,&bit_64,8);
+memcpy(res_cmd->data+20,&bit_64,8);
+memcpy(res_cmd->data+28,&bit_64,8);
+memcpy(res_cmd->data+36,&bit_64,8);
+memcpy(res_cmd->data+42,&bit_64,8);
+amdtpsSendData((uint8_t *)res_cmd, 54);
+
+// Log time
+long t = micros();
+Serial.printf("Package: %3d, Time: %3d\n",package,t);
+package++;  </p></code></pre>
+                             </p><pre><code><p class="text-left"># Unpack from an example stream that transmits a 2-byte and a
+# 4-byte integer as quickly as possible, both little-endian.
+if (code == Commands.BYTESTREAM_TX.value):
+print(unpack("&lt;IQQQQQQ",data));</p></code></pre>   
                                     <img class="img-fluid rounded mb-5" src="assets/img/portfolio/dataratehisto.png" alt="" />  
                                     <img class="img-fluid rounded mb-5" src="assets/img/portfolio/dataratetime.png" alt="" />
-                                    <p class="text-justify">From the first test, a smaller data set of 14 bytes per package, we can see that the average latency is 108.986 ms.  40.102% of the packets were dropped, which is not a good result.</p>
-                                    <pre><code><p class="text-left"></p><pre><code><p class="text-left"><pre><code><p class="text-left"></p><pre><code><p class="text-left">uint32_t currentFreq = getLoudest();
-                    // Light the LED if loudest frequency is above threshold
-                    if (currentFreq > lightFreq)
-                    {
-                    digitalWrite(lightPin, HIGH);
-                    delay(10);
-                    digitalWrite(lightPin, LOW);  
-            }</p></code></pre></code></pre></p></code></pre></code></pre>
+                                    <p class="text-justify">From the first test, a smaller data consists of one 32-bit and one 64-bit integer, for a total of 14 bytes per package.  We can see that the average latency is 108.986 ms, and 40.102% of the packets were dropped, which is not a good result.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/dataratehisto-2.png" alt="" />  
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/dataratetime-2.png" alt="" />
+                                    <p class="text-justify">In the second test, a larger data set consists of one 32-bit and six 64-bit integers, for a total of 54 bytes per package.  We can see that the average latency is approximately equivalent at 107.053 ms.  However, the percentage of packets dropped increased greatly to 70.091%, which means much data was lost.  This is expected, as larger packets of data have a higher chance of being corrupted or being lost.  However, this may be a problem, as file sizes sent over Bluetooth are likely to be much bigger than 54 bytes, and can contain significant data loss without intelligent processing.</p>
+                                    <p class="text-justify">Below demonstrates the send and recieve dialog windows while the program is running:</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/Cad9vYuJ9g8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window

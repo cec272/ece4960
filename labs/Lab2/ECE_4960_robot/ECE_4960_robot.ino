@@ -295,19 +295,24 @@ void loop()
     if (bytestream_active)
     {
         res_cmd->command_type = BYTESTREAM_TX;
-        res_cmd->length = 64;
+        res_cmd->length = 54;
         //TODO: Put an example of a 32-bit integer and a 64-bit integer
         //for the stream. Be sure to add a corresponding case in the
         //python program.
         // Serial.printf("Stream %d \n", bytestream_active);
         uint32_t bit_32 = 2147483648;
-        uint64_t bit_64 = 9223372036854775807;
+        uint64_t bit_64 = 9223372036854775806;
         memcpy(res_cmd->data,&bit_32,4);
         memcpy(res_cmd->data+4,&bit_64,8);
-        amdtpsSendData((uint8_t *)res_cmd, 14);
+        memcpy(res_cmd->data+12,&bit_64,8);
+        memcpy(res_cmd->data+20,&bit_64,8);
+        memcpy(res_cmd->data+28,&bit_64,8);
+        memcpy(res_cmd->data+36,&bit_64,8);
+        memcpy(res_cmd->data+42,&bit_64,8);
+        amdtpsSendData((uint8_t *)res_cmd, 54);
 
         // Log time
-        uint32_t t = micros();
+        long t = micros();
         Serial.printf("Package: %3d, Time: %3d\n",package,t);
         package++;
     }
