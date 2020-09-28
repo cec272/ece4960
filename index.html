@@ -534,7 +534,12 @@ print(unpack("&lt;IQQQQQQ",data));</p></code></pre>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab3/startsim.png" alt="" />
                                     <p class="text-justify">The alternate views allow different information and viewpoint to be drawn in the simulation.  The “Data” tab starts a lightly shaded beam from the front of the robot.  This shows the field of view of the distance sensor and plots the sensor data returns from the distance sensor onto the screen.  The “Perspective camera” changes the view from a top-down view, to a 3-D visualization.  This shows the height of the walls and robot to give a greater sense.</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab3/simviews.png" alt="" />
+                                    <h6>Start the Keyboard Teleoperation Tool</h6>
+                                    <p class="text-justify">There are 9 keyboard controls.  The first row controls the forward velocity (u - fwd-left, i - fwd-straight, o - fwd-right), second row controls zero forward/reverse velocity (j - left, k - stop, l - right), and last row controls reverse velocity (m - rev-left, , - rev-straight, . - rev-right).  The robot shows its commanded  motion on the simulator.</p>
                                     <h6>Perform Tests on Your Virtual Robot</h6>
+                                    <p class="text-justify">Using the keyboard controls, I started moving the robot.  I found the miinimum linear speed = 0.1 and minimum angular speed = 0.3.  There does not seem to be a maximum speed, as I was able to command up to 5233.  The mouse can be used to drag the robot to anywhere in the simulation space, including outside the exterior boundaries..  When the robot crashes, a warning symbol appears at the site of the collision.  The robot disappears and the simulation must be restarted.</p>
+                                    <p class="text-justify">Below is a picture of the simulation when the robot crashes into a wall:</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab3/simcrash.png" alt="" />
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
