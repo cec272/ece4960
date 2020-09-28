@@ -426,9 +426,115 @@ print(unpack("&lt;IQQQQQQ",data));</p></code></pre>
                                         <div class="divider-custom-line"></div>
                                     </div>
                                     <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/circus.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab3/botandremote.jpg" alt="" />
                                     <!-- Portfolio Modal - Text-->
-                                    <p class="mb-5">To be completed</p>
+                                    <h5>Characterize Your Car</h5>
+                                    <h6>Simple Measurements</h6>
+                                    <p class="text-justify">The first types of measurements I collected were simple measurements, i.e, measurements that can be collected without movement of the vehicle.  These static measurements are important because they influence our knowledge of the system, or plant, we are creating.  The measurements that I prioritized were constants that appeared in our state-space equation of the vehicle.  These included the mass, wheelbase, and diameter of the wheel.  Other measurements were collected to gain an understanding of the limits of the vehicle -- exterior dimensions, and ground clearance.  These are important because they define what type of environment the robot can operate in, such as the minimum distance between two walls.</p>
+                                    <p class="text-justify">There were three tools used to collect these simple measurements.  They were calipers, a tape measure (for measurements that exceeded the size of the capiers), and a food scale.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab3/caliper.jpg" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab3/measuringtape.jpg" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab3/scale.jpg" alt="" />
+                                    <p class="text-justify">Ten trials of these measurements were collected.  The raw test data can be found <a href="https://docs.google.com/spreadsheets/d/19nys2PhjI9qLWpH8V0svnCkfgyEShMERXw3EGm6eyXY/edit#gid=0">here</a>.  Below is a table, showing the average measurements from these tests.</p>
+                                    <table style="width:100%">
+                                        <tr>
+                                            <th>Test</th>
+                                            <td>Weight (inc. battery)</td>
+                                            <td>Wheelbase</td>
+                                            <td>Wheel Diameter</td>
+                                            <td>Length</td>
+                                            <td>Width</td>
+                                            <td>Height</td>
+                                            <td>Ground Clearance</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Type of Test</th>
+                                            <td>Food Scale</td>
+                                            <td>Caliper</td>
+                                            <td>Caliper</td>
+                                            <td>Tape Measure</td>
+                                            <td>Tape Measure</td>
+                                            <td>Tape Measure</td>
+                                            <td>Caliper</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Average Measurment</th>
+                                            <td>0.522 kg</td>
+                                            <td>3.109 in</td>
+                                            <td>3.053 in</td>
+                                            <td>6.24 in</td>
+                                            <td>5.51 in</td>
+                                            <td>4.50 in</td>
+                                            <td>0.943 in</td>
+                                        </tr>
+                                    </table>
+                                    <h6>Experimental Measurements</h6>
+                                    <p class="text-justify">The second type of measurements I collected were experimental measurements, i.e. measurements that involved the use of the vehicle’s motors.  These required a more complex set-up, involving the use of cameras, masking tape, and movable boards.  My motivation for these tests were to understand how motor inputs affect the state of the system, which will be important for feedback control when we program the robot.  I focused on measuring longitudinal acceleration,  longitudinal velocity, angular velocity, braking distance, climb angle, and maximum pushing force.  During these tests, an approximate record of the 700 mAh battery stamina was measured to be about 8 minutes of use, with an average 2 hours 10 minute recharge time.  It was difficult to measure battery times since the charging was not constantly monitored, and the robot was not run continuously.</p>
+                                    <p class="text-justify">Multiple trials were conducted for each teach, with a focus on repeatability and a low standard deviation.  The raw test data can be found <a href="https://docs.google.com/spreadsheets/d/19nys2PhjI9qLWpH8V0svnCkfgyEShMERXw3EGm6eyXY/edit#gid=1487073064">here</a>. Below is a table, summarizing the results from these tests.</p>
+                                    <table style="width:100%">
+                                        <tr>
+                                            <th>Test</th>
+                                            <td>Average Acceleration</td>
+                                            <td>Top Speed</td>
+                                            <td>Max Angular Velocity</td>
+                                            <td>Braking Distance</td>
+                                            <td>Forward Force (all wheels)</td>
+                                            <td>Forward Force (left wheels)</td>
+                                            <td>Forward Force (right wheels)</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Type of Test</th>
+                                            <td>13 ft drag strip</td>
+                                            <td>13 ft drag strip</td>
+                                            <td>360 spin</td>
+                                            <td>4 ft drag strip</td>
+                                            <td>Food Scale</td>
+                                            <td>Food Scale</td>
+                                            <td>Food Scale</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Average Measurment</th>
+                                            <td>7.58 ft/s^2</td>
+                                            <td>8.78 ft/s</td>
+                                            <td>1.429 rev/s</td>
+                                            <td>9.19 ft</td>
+                                            <td>2.792 N</td>
+                                            <td>1.529 N</td>
+                                            <td>1.647 N</td>
+                                        </tr>
+                                    </table>
+                                    <p class="text-center">Acceleration and Top Speed</p>
+                                    <p class="text-justify">The first test was to measure both longitudinal acceleration and longitudinal top speed.  This is an important measure of how the motors are able affect forward motion.  This test involved creating a 13 foot (the maximum that would fit in my apartement) “drag strip.”  The average acceleration was taken by measuring the amount of time the robot took to complete the 13 foot run, using maximum control input into both motors in “fast” mode.  The maximum velocity was taken by measuring the number of video frames between the robot’s 10 foot and 13 foot runs, which occurs after the robot has reaches its maximum velocity.  Acceleration and velocity were taken using the following equation:</p>
+                                    <p class="text-center">a = 2 * d1 / t^2</p>
+                                    <p class="text-center">v = d2 / (fr * 1/fps)</p>
+                                    <p class="text-justify">where d1 = 13 ft, t = seconds elapsed, d2 = 3 ft, fr = number of frames elapsed, and fps = the framerate of the video.</p>
+                                    <p class="text-justify">In the below video, the 17 acceleration runs are shown.  The acceleration and velocity data were remarkably consistent, however during the acceleration runs there were 2 subsets of data.  Acceleration runs were usually above 8 ft/s^2, however for 3 of the runs, the acceleration was approximately 4 ft/s^2.  This is an interesting result and is likely due to inconsistencies with the motors, controller, or battery voltage.  One observation was that the robot tended to drift towards the left by the end of the drag strip.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/lL8A2vPIiyU" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify">Timing was taken using video analysis.  Below demonstrates how video frame analysis was conducted using video editing software:</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab3/videoanalysis.png" alt="" />
+                                    <p class="text-center">Angular Velocity</p>
+                                    <p class="text-justify">Measuring the vehicle’s average angular velocity while in “fast”  mode is important to characterize how fast the vehicle will be able to turn.  When looking at the state-space-equation, the angular velocity is one of the state variables in the equation.  In order to measure the angular velocity, I measured the average amount of time it took for the robot to complete 10 rotations by revering the control inputs.  I completed these measurements for both clockwise and counter-clockwise rotations.  While there was not much of a variance between angular velocity rates in different directions, the average angular velocity increased by 34% between the first test and the tenth test.  Since the first test started on a full battery, we can conclude that spinning about the robot’s axis by reversing motor speeds takes a considerable toll on the battery.  The angular velocity was calculated by the below equation:</p>
+                                    <p class="text-center">domega/dt = (# rotations)/t</p>
+                                    <p class="text-justify">The video below demonstrates how the angular velocity test was conducted:</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/HbM4OVoUISM" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-center">Braking</p>
+                                    <p class="text-justify">Another test was to measure how long it takes the vehicle to bake.  This could be useful to understand how the robot will slow down when it needs to turn or brake for an obstacle.  There are two methods of braking: coasting and applying reverse throttle.  In this case, I considered braking as coasting, simply releasing remote control inputs so that there was zero input from the motors.  Applying reverse throttle did bring the robot to a robot very quickly; however, this tended to upset the balance of the vehicle such that it flipped over, which is highly unreliable to measure.  For the braking test, I accelerated the vehicle down a “4 foot drag strip,” and braked the vehicle after 4 feet. The distance until the robot came to a standstill was measured.</p>
+                                    <p class="text-justify">The video below demonstrates how the braking test was conducted:</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/5yklp3g_nDs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-center">Forward Force</p>
+                                    <p class="text-justify">I wanted to calculated how much force the robot is able to exert.  This is a function of the motor torque and tire friction. Since there was no tire slip, we can safely relate the forward force to the motor torque.  In order to conduct this test, the front of the robot was place against a cardboard box, which was placed against the food scale.  This set-up prevented the wheels from contacting the scale.  The maximum motor speed was commanded by the remote in while in “fast” operation.  Three variants of motor command were conducted: all wheels, left wheels, and right wheels, with the intent of seeing if one motor developed more torque than the others, of which was a 7.7% difference.  Some of the limitations of this test include the force that went into deforming the cardboard box, and limitations of using the food scale vertically.</p>
+                                    <p class="text-justify">The video below demonstrates how the force test was conducted:</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/IYz5uPIIZXw" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <h5>Characterize Your Virtual Robot</h5>
+                                    <h6>Setup the Base Code</h6>
+                                    <p class="text-justify">Libraries were successfully installed and setup shell script run.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab3/setup.png" alt="" />
+                                    <h6>Start the Simulator</h6>
+                                    <p class="text-justify">By default, when the lab3-manager is started, a stage with a robot opens.  There seems to be a map, with a boundary and walls.  A robot, shown as a small green squircle, is placed in the middle of the environment.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab3/startsim.png" alt="" />
+                                    <p class="text-justify">The alternate views allow different information and viewpoint to be drawn in the simulation.  The “Data” tab starts a lightly shaded beam from the front of the robot.  This shows the field of view of the distance sensor and plots the sensor data returns from the distance sensor onto the screen.  The “Perspective camera” changes the view from a top-down view, to a 3-D visualization.  This shows the height of the walls and robot to give a greater sense.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab3/simviews.png" alt="" />
+                                    <h6>Perform Tests on Your Virtual Robot</h6>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
