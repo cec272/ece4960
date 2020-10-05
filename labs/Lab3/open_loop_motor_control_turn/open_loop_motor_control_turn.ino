@@ -87,7 +87,6 @@ void setup()
 #define RIGHT_MIN 84+40
 
 boolean hasRun = false;
-int runTime = 2500;
 
 void loop()
 {
@@ -102,9 +101,32 @@ void loop()
 
   //Smoothly move one motor up to speed and back (drive level 0 to 255)
   if (!hasRun){
+
+    // go straight
     myMotorDriver.setDrive( LEFT_MOTOR, FWD, LEFT_MIN);
     myMotorDriver.setDrive( RIGHT_MOTOR, FWD, RIGHT_MIN);
-    delay(runTime);
+    delay(1000);
+
+    // stop 
+    myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+    delay(100);
+    
+    // turn left
+    myMotorDriver.setDrive( LEFT_MOTOR, REV, LEFT_MIN+50);
+    myMotorDriver.setDrive( RIGHT_MOTOR, FWD, RIGHT_MIN+30);
+    delay(700);
+
+    // stop
+    myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+    delay(100);
+    
+    // go straight
+    myMotorDriver.setDrive( LEFT_MOTOR, FWD, LEFT_MIN);
+    myMotorDriver.setDrive( RIGHT_MOTOR, FWD, RIGHT_MIN);
+    delay(800);
+    
     hasRun = true;
   }
   else{
