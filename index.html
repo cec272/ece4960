@@ -571,9 +571,185 @@ print(unpack("&lt;IQQQQQQ",data));</p></code></pre>
                                         <div class="divider-custom-line"></div>
                                     </div>
                                     <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/game.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab4/robotparts.jpg" alt="" />
                                     <!-- Portfolio Modal - Text-->
-                                    <p class="mb-5">To be completed</p>
+                                    <h5>Open-Loop Motor Control on the Vehicle</h5>
+                                    <p class="text-justify">The Artemis board and motor driver were connected via the provided Qwiic connector, which allows the two boards to connect via I2C.</p>
+                                    <h6>Connecting Example1_wire</h6>
+                                    <p class="text-justify">This program operates in a loop scanning across all possible i2c devices and attempts to begin a transmission at that address.  If there is no error, it reports that there is a device at that particular address and otherwise, reports that there is no device at the address.  This allowed us to find the address of the Serially Controlled Motor Driver (SCMD).  For the serial controlled motor driver, the address is Ox5D, which is what is specified on the Sparkfun website for this motor driver.</p>
+                                    <h6>Take the Car Apart!</h6>
+                                    <p class="text-justify">This part was quite fun, as we performed “surgery” on the vehicle and transplanted the Artemis board onto the vehicle.  I disassembled the chassis, and cut the wire connections between the motors and battery and the RC controller.  Next, I reconnected the motor and battery to the motor controller, and connected the motor controller to the Artemis board.  While the end pieces look slightly sloppy, I will have a much neater 3-D printed mount for the future. One observation was that twice, the motor wires slipped out from the controller, even after they have been tightened. </p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab4/connectingrobot2.jpg" alt="" />
+                                    <p class="text-justify">Using the provided Sparkfun example <a href="https://learn.sparkfun.com/tutorials/hookup-guide-for-the-qwiic-motor-driver?_ga=2.14725942.1279742571.1601299911-1939484602.1599657570#software-setup">code</a>, I changed the I2C address and added my own motor code.  Slowly stepped 2 at a time the motor speed, delaying 1 sec at each step.  I printed in the serial monitor what the command was and witnessed when the motors speed up.  I found that: Lower limit: 72 for left, 84 for right.  The motors spun in the directions i intended and the left/ right was the same as I have in the code.</p>
+                                    <iframe class="embed-responsive video"  height="315" src="https://www.youtube.com/embed/Nb6tQl19JbM" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify">In order to make the robot go straight, I modified the code to take into the minimum speed offset for both motors.  This was considered the baseline speed for the motors, and I applied an equal offset of +40  to increase the motor speed so that the vehicle moves at a reasonable velocity. I discovered that the minimum speed on the ground is different than the minimum speed in the air, as additional torque is required to overcome the additional inertia and friction while the robot is on the ground to begin moving.   The code runs such that the robot commands forward speed to both motors for 2.5 seconds, after which the robot commands 0 speed.  This works well to move the robot about 7 feet, consistently in a straight line.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/L2K6_DOeVyg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    </p><pre><code><p class="text-left">#define LEFT_MOTOR 0
+#define RIGHT_MOTOR 1
+#define FWD 0
+#define REV 1
+#define LEFT_MIN 74+40
+#define RIGHT_MIN 84+40
+
+boolean hasRun = false;
+int runTime = 2500;
+
+void loop()
+{
+    //pass setDrive() a motor number, direction as 0(call 0 forward) or 1, and level from 0 to 255
+    myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+    while (digitalRead(8) == 0); //Hold if jumper is placed between pin 8 and ground
+
+    //***** Operate the Motor Driver *****//
+    //  This walks through all 34 motor positions driving them forward and back.
+    //  It uses .setDrive( motorNum, direction, level ) to drive the motors.
+
+    //Smoothly move one motor up to speed and back (drive level 0 to 255)
+    if (!hasRun){
+        myMotorDriver.setDrive( LEFT_MOTOR, FWD, LEFT_MIN);
+        myMotorDriver.setDrive( RIGHT_MOTOR, FWD, RIGHT_MIN);
+        delay(runTime);
+        hasRun = true;
+    }
+    else{
+        myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+        myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+    }
+}  </p></code></pre>
+                                     <p class="text-justify">Another test for the robot was to command turns.  Turns are a little more difficult, but the tightest turn that can be made is completed by commanding the two motors in opposite directions.  My plan was to command the robot to move forward, turn 90 degrees left, then continue moving forward.  Forward motion was commanded similarly to the straight motion test.  However, turns required a little more fine tuning.  I found that additional speed was required to avoid the motors from stalling, as compared to forward motion.  This makes sense, as the motors have to overcome the “binding” and “scrubbing” that adds additional friction while turning.  Also, I found that the minimum speeds in reverse are different than the minimum speeds in forward.  After fine tuning and testing to ensure the timing of the turn was complete, I was able to command the robot to perform the left turn.  There was much more variation in angle turned than the forward motion test, which is why feedback control would be especially useful in this case. </p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/DxLtJ86nUEA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    </p><pre><code><p class="text-left">#define LEFT_MOTOR 0
+#define RIGHT_MOTOR 1
+#define FWD 0
+#define REV 1
+#define LEFT_MIN 74+40
+#define RIGHT_MIN 84+40
+
+boolean hasRun = false;
+
+void loop()
+{
+    //pass setDrive() a motor number, direction as 0(call 0 forward) or 1, and level from 0 to 255
+    myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+    myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+    while (digitalRead(8) == 0); //Hold if jumper is placed between pin 8 and ground
+
+    //***** Operate the Motor Driver *****//
+    //  This walks through all 34 motor positions driving them forward and back.
+    //  It uses .setDrive( motorNum, direction, level ) to drive the motors.
+
+    //Smoothly move one motor up to speed and back (drive level 0 to 255)
+    if (!hasRun){
+
+        // go straight
+        myMotorDriver.setDrive( LEFT_MOTOR, FWD, LEFT_MIN);
+        myMotorDriver.setDrive( RIGHT_MOTOR, FWD, RIGHT_MIN);
+        delay(1000);
+
+        // stop 
+        myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+        myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+        delay(100);
+        
+        // turn left
+        myMotorDriver.setDrive( LEFT_MOTOR, REV, LEFT_MIN+50);
+        myMotorDriver.setDrive( RIGHT_MOTOR, FWD, RIGHT_MIN+30);
+        delay(700);
+
+        // stop
+        myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+        myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+        delay(100);
+        
+        // go straight
+        myMotorDriver.setDrive( LEFT_MOTOR, FWD, LEFT_MIN);
+        myMotorDriver.setDrive( RIGHT_MOTOR, FWD, RIGHT_MIN);
+        delay(800);
+        
+        hasRun = true;
+    }
+    else{
+        myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+        myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+    }
+}  </p></code></pre>
+                                    <p class="text-justify">I also modified the lourdest frequency code from Lab 1 to control the robot.  In this test, the robot moves forward, when a loud frequency is detected.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/g4oWzexpNNc" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    </p><pre><code><p class="text-left">void loop()
+{
+    if (myPDM.available())
+    {
+        myPDM.getData(pdmDataBuffer, pdmDataBufferSize);
+
+        uint32_t currentFreq = getLoudest();
+
+        //pass setDrive() a motor number, direction as 0(call 0 forward) or 1, and level from 0 to 255
+        myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+        myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+        while (digitalRead(8) == 0); //Hold if jumper is placed between pin 8 and ground
+
+        //***** Operate the Motor Driver *****//
+        //  This walks through all 34 motor positions driving them forward and back.
+        //  It uses .setDrive( motorNum, direction, level ) to drive the motors.
+
+        //Smoothly move one motor up to speed and back (drive level 0 to 255)
+        // Light the LED if loudest frequency is above threshold
+        if (currentFreq > lightFreq)
+        {
+                myMotorDriver.setDrive( LEFT_MOTOR, FWD, LEFT_MIN);
+                myMotorDriver.setDrive( RIGHT_MOTOR, FWD, RIGHT_MIN);
+                delay(runTime);
+                myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+                myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor
+        }
+        else{
+                myMotorDriver.setDrive( LEFT_MOTOR, 0, 0); //Stop motor
+                myMotorDriver.setDrive( RIGHT_MOTOR, 0, 0); //Stop motor  
+        }
+        
+    }
+
+
+    // Go to Deep Sleep until the PDM ISR or other ISR wakes us.
+    am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
+} </p></code></pre>
+                                    <h5>Simulated Open-Loop Motor Control</h5>
+                                    <h6>Set-up the Base Code</h6>
+                                    <p class="text-justify">All of the code was downloaded and successfully set-up without any faults.</p>
+                                    <h6>Start the Simulator</h6>
+                                    <p class="text-justify">After typing ‘lab4-manager,’ the simulator launchches, similarly to the environment for Lab 3.  There is a robot placed in an environment with walls.</p>
+                                    <h6>Jupyter Lab</h6>
+                                    <p class="text-justify">The Jupyter notebook allowed us to quickly write and test our Python code for controlling the robot in the simulator.  The motivation for my code was to move the robot in a rectangle, such that the robot’s path meets the criteria for a rectangle: opposite sides should be parallel and equal in length, and the turns should be 90 degrees.  While we cannot exactly measure the accuracy, if the robot completes the entire path by replicating the same exact turns and moving the exact same distance on opposite sides, a good open loop control shall start and end in the same position.  The code was created similarly to controlling the actual robot, by commanding and holding a set velocity for a certain amount of time.  One difference is that this virtual robot accepts linear and angular velocity commands, while on the robot, we controlled the motor speeds of the left and right motors.  This timing was done completely experimentally, until the robot replicated the desired  motion. The most difficult portion was the angles, where by experimentation, it was determined turning at 0.5 m/s for  3.1 seconds produced an approximate 90 degree left turn.   The robot started at  (-2.01,6.00,0.00,0.00) and ended at (-2.08,6.06,0.00,-4.77), which means we were quite successful in open-loop control for a rectangular motion. </p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/NavyV_hfVto" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    </p><pre><code><p class="text-left">robot.set_vel(.5,0)
+time.sleep(3)
+robot.set_vel(0,0)
+time.sleep(.3)
+robot.set_vel(0,.5)
+time.sleep(3.1)
+robot.set_vel(0,0)
+robot.set_vel(.5,0)
+time.sleep(1)
+robot.set_vel(0,0)
+time.sleep(.3)
+robot.set_vel(0,.5)
+time.sleep(3.1)
+robot.set_vel(0,0)
+robot.set_vel(.5,0)
+time.sleep(3)
+robot.set_vel(0,0)
+time.sleep(.3)
+robot.set_vel(0,.5)
+time.sleep(3.1)
+robot.set_vel(0,0)
+robot.set_vel(.5,0)
+time.sleep(1)
+robot.set_vel(0,0)
+time.sleep(.3)
+robot.set_vel(0,.5)
+time.sleep(3.1)
+robot.set_vel(0,0)</p></code></pre>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
