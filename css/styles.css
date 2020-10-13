@@ -10259,3 +10259,35 @@ form .row:first-child .floating-label-form-group {
 .copyright {
   background-color: #1a252f;
 }
+
+td div.comp { 
+  margin-top: -0.6ex;
+  margin-bottom: 1rem;
+  overflow: auto;
+  -ms-overflow-style: scrollbar;
+}
+td div.comb { 
+  margin-top: -0.6ex; margin-bottom: -.6ex;
+  margin-top: -0.6ex;
+  margin-bottom: 1rem;
+  overflow: auto;
+  -ms-overflow-style: scrollbar;
+}
+td div.norm {
+  line-height:normal;
+}
+td div.hrcomp { 
+  line-height: 0.9; margin-top: -0.8ex; margin-bottom: -1ex;
+}
+td.sqrt {
+  border-top:2 solid black;
+  border-left:2 solid black;
+  border-bottom:none;
+  border-right:none;
+}
+table.sqrt {
+  border-top:2 solid black;
+  border-left:2 solid black;
+  border-bottom:none;
+  border-right:none;
+}
