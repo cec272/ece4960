@@ -79,10 +79,10 @@ void setup()
 
 }
 
-#define LEFT_MOTOR 0
-#define RIGHT_MOTOR 1
-#define FWD 0
-#define REV 1
+#define LEFT_MOTOR 1
+#define RIGHT_MOTOR 0
+#define FWD 1
+#define REV 0
 #define LEFT_MIN 74+40
 #define RIGHT_MIN 84+40
 
