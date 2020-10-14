@@ -787,7 +787,7 @@ robot.set_vel(0,0)</p></code></pre>
                                     <p class="text-justify">I installed the VCNL4040 library, connected the proximety sensor to the Artemis board, and ran the included “Example1_Wire” script.  The I2C address is 0x60.  This matches the address from the Sparkfun hook-up guide.  </p>
                                     <p class="text-justify">I installed the VCNL4040 library, connected the proximety sensor to the Artemis board, and ran the included “Example1_Wire” script.  The I2C address is 0x60.  This matches the address from the Sparkfun hook-up guide.  </p>
                                     <h6>Testing Proximity Sensor</h6>
-                                    <p class="text-justify">From the sparkfun <a href="https://learn.sparkfun.com/tutorials/qwiic-proximity-sensor-vcnl4040-hookup-guide">datasheet</a>, it says that this sensor can detect objects up to 20 cm away. It also has no dead zone, and can read all the way up to the face of the sensor.  This sensor does not report the exact distance, but is useful to detect if an object is present in front of the proximeter, and if the there is a change in the distance from the sensors. Supposedly, the largest value, 65535, is the value when the object is closest to the sensor, and the minimum, (0-1) is the furthest the sensor can read. In order to map the value of the proximeter to distance values, I performed a  test where I sampled data every 2cm, from 0.5 cm to  20 cm, for 10 sec.  For all of the tests, an average of 171 readings were taken in 10 seconds, giving a sampling rate of 17.1 Hz.  Then I analyzed the proximeter output data and plotted it against the real distance.</p>
+                                    <p class="text-justify">From the sparkfun <a href="https://learn.sparkfun.com/tutorials/qwiic-proximity-sensor-vcnl4040-hookup-guide">datasheet</a>, it says that this sensor can detect objects up to 20 cm away. It also has no dead zone, and can read all the way up to the face of the sensor.  This sensor does not report the exact distance, but is useful to detect if an object is present in front of the proximeter, and if the there is a change in the distance from the sensors. Supposedly, the largest value, 65535, is the value when the object is closest to the sensor, and the minimum, (0-1) is the furthest the sensor can read. In order to map the value of the proximeter to distance values, I performed a  test where I sampled data every 2cm, from 0.5 cm to  20 cm, for 10 sec.  For all of the tests, an average of 171 readings were taken in 10 seconds, giving a sampling rate of 17.1 Hz.  On average it each sensor measurment took about 590 microseconds, with a standard deviation of 0.6.  Then I analyzed the proximeter output data and plotted it against the real distance.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/gnkGDZJ9Gzo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab5/proximeter_measurement_plot.png" alt="" />
                                     <p class="text-justify">The raw data can be found <a href="https://docs.google.com/spreadsheets/d/11Xb-sc4A6FEmtxGb2ILV8F47d3i2-k93kLschXzzKao/edit?usp=sharing">here</a>.  We can see that there is a nonlinear correlation between the output and distance.  From the errorbars, the standard deviation is small, and the ‘sweet spot’ is at 4 cm. As the distance increases, so does the standard deviation. Using MATLAB, we can create a polynomial fit for the data.  The most reasonable fit came of 10th order: </p>
@@ -797,7 +797,7 @@ robot.set_vel(0,0)</p></code></pre>
                                     <p class="text-justify">The corresponding MATLAB script can be found <a href="https://drive.matlab.com/sharing/ab33428b-cd63-4675-b15c-3296cfa33974">here</a>.</p>
                                     <p class="text-justify">This output is not reliable because along with distance, from my testing, it also varies greatly with surface color reflectivity, and ambient light.  This means that this equation is only valid for detection of the tested textured black plastic surface and interior lighting condition.  This is not particularly useful for distance, in practice because the robot may detect many different objects in different lighting conditions.</p>
                                     <h5>Time of Flight Sensor</h5>
-                                    <p class="text-justify">I installed the VL53L1 library, connected the ToF sensor to the Artemis board, and ran the included “Example1_Wire” script.  The I2C address is 0x29.  This matches the address from the Sparkfun hook-up <a href="https://learn.sparkfun.com/tutorials/qwiic-distance-sensor-vl53l1x-hookup-guide/hardware-overview">guide</a>..  </p>
+                                    <p class="text-justify">I installed the VL53L1 library, connected the ToF sensor to the Artemis board, and ran the included “Example1_Wire” script.  The I2C address is 0x29.  This matches the address from the Sparkfun hook-up <a href="https://learn.sparkfun.com/tutorials/qwiic-distance-sensor-vl53l1x-hookup-guide/hardware-overview">guide</a>. </p>
                                     <h6>Running Time of Flight Sensor</h6>
                                     <p class="text-justify">From the datasheet, this ToF sensor has a measurement range of (40mm, 4,000mm].  Loading Example1_ReadDistance from the library, the serial monitor outputs the distance to an object in the sensor’s FOV in both millimeters and feet.  I tested the sensor within the measurement range, at 200mm to get a sense of its accuracy.  It did not seem to be very accurate, as the readings were in the 150mm range, about 25% error.  The sensor likely needs calibration.</p>
                                     <iframe class="embed-responsive video"  height="315" src="https://www.youtube.com/embed/GaeMeKiNkaw" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -1022,7 +1022,50 @@ if (rangeStatus == 0){ // perform action only if sensor measurement is valid
 }
 }</p></code></pre>
                                     <p class="text-justify">Some improvements I would add would be adding an averaging filter to avoid erroneous measurements triggering accidental motion, and a complementary filter to combine both the proximeter and ToF sensor together.  I would also implement feedback control with the distance sensor to smoothly decrease the motor speed until the robot reaches a set-point of 3 centimeters in front of the distance sensor.</p>
-                                    <p class="text-justify"></p>
+                                    <h5>Obstacle Avoidance by Turning</h5>
+                                    <p class="text-justify">The code was downloaded and set-up successfully.  In the Jupyter notebook, I tried to replicate the Arduino obstacle_avoidance_turn() as much as possible to see if the code returns similar results to the physical robot. Similarly to the physical robot, the code is broken into 3 main sections: get sensor measurements, plan control action, and perform control output.  There are a few differences between the simulator and the physical robot.  First, the simulator takes as inputs desired linear and angular velocity instead of values for the left and right motors.  Additionally, the simulated robot responded much faster to commands without the 20 ms measurement time of the physical robot.  Therefore, the timing and velocity portions were edited to reflect these commands.  The robot moves at .5 m/s, and turns left at 1 m/s if an object is detected.  The threshold for turning was reduced from the physical robot’s .6 m to 1.  After tuning these parameters, the robot was able to successfully avoid obstacles by turning and did not have any collisions after 5 meters of running.  I believe these were optimal parameters, as the robot gets close, but does not collide with the walls.</p>
+                                    <p class="text-justify">In the video below, we can see the robot approaches the wall a couple of times and just misses a collison.  This occurs at very shallow angles, where the wall is not in the field of view of the sensor.  This can be mitigated by increasing the sensor field of view, by adding additional distance sensors, rotating  the sensor, or by changing the type of sensor.  Additionally, more intelligent sensor logic by using filters and incorporating localization may improve object avoidance.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/rAWUsFCwzWw" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify">The code for the virtual robot is shown below:</p>
+                                    </p><pre><code><p class="text-left">def perform_obstacle_avoidance(robot):
+while True:
+    ### Loop variables ###
+    v = 0
+    w = 0
+    too_close = 1
+    turn = False
+    brake = False
+    has_braked = False
+    
+    ### Get sensor measurement ###
+    distance = robot.get_laser_data()
+    
+    ### Plan control output from data
+    if (distance > too_close):
+        v = .5
+        w = 0
+        turn = False # do not turn
+        brake = False # do not brake
+        has_braked = False # reset has_braked
+    else:
+        v = 0
+        w = 0
+        turn = True
+        brake = True
+    
+    ### Perform control action ###
+    if (not has_braked and brake): # brake
+        robot.set_vel(0,0)
+        time.sleep(.01)
+        has_braked = True
+    if (turn): # turn
+        robot.set_vel(0,1)
+        time.sleep(.2)
+
+    robot.set_vel(v,w) # move normally
+    time.sleep(.05)
+                
+perform_obstacle_avoidance(robot)</p></code></pre>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
