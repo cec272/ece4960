@@ -1089,7 +1089,7 @@ perform_obstacle_avoidance(robot)</p></code></pre>
                             <div class="row justify-content-center">
                                 <div class="col-lg-8">
                                     <!-- Portfolio Modal - Title-->
-                                    <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0" id="portfolioModal6Label">Lab 6</h2>
+                                    <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0" id="portfolioModal6Label">Lab 6: IMU, PID, Odometry</h2>
                                     <!-- Icon Divider-->
                                     <div class="divider-custom">
                                         <div class="divider-custom-line"></div>
@@ -1099,7 +1099,176 @@ perform_obstacle_avoidance(robot)</p></code></pre>
                                     <!-- Portfolio Modal - Image-->
                                     <img class="img-fluid rounded mb-5" src="assets/img/portfolio/submarine.png" alt="" />
                                     <!-- Portfolio Modal - Text-->
-                                    <p class="mb-5">To be completed</p>
+                                    <h5>Setting-up the IMU</h5>
+                                    <p class="text-justify">I connected the IMU using the Qwiic port and scanned the devices using ‘Example1_Wire.’  The IMU was recognized as an I2C device at 0x69.  This is what is expected from the <a href="https://learn.sparkfun.com/tutorials/sparkfun-9dof-imu-icm-20948-breakout-hookup-guide">datasheet</a>. </p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/imu_i2c.png" alt="" />
+                                    <p class="text-justify">After running ‘Example1_Basics’ from the IMU library, we can see that scaled acceleration (milli-g), gyroscope, and magnetic flux density readings are displayed as 1X3 vectors in units of milli-g, degrees per second, and micro-Tesla, respectively.  The last reading is temperature, recorded in Celcius.  I noticed that the sampling rate seemed to be quite high, and from the <a href="https://cdn.sparkfun.com/assets/learn_tutorials/8/9/3/DS-000189-ICM-20948-v1.3.pdf">datasheet</a> is up to 100 kHz over I2C in standard mode.  Having a high sampling rate is important to reduce time delay when we create a feedback control system.</p>
+                                    <p class="text-justify">I moved the IMU and make some observations with the goal of understanding the board’s coordinate systems.  I noticed the values were constant while the IMU was stationary, which is as expected.  As I moved the accelerometer, the values changed, corresponding to the direction and rotation it was moved.  I tried to isolate movements to only one coordinate system and observe the outputs in the serial monitor.  By doing this, I discovered the following coordinate system:</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/imu_coords.png" alt="" />
+                                    <p class="text-justify">Below is a video of the script being run and the output from the serial monitor.</p>
+                                    <h5>Accelerometer</h5>
+                                    <p class="text-justify">Using SerialPlot, I was able to plot changing roll and pitch from at angles [-90, 0, 90] over time.  The sensor responds relatively well, but it is apparent there is much noise in the readings.  Also, there is some interference when we move the acceleration in only one direction, such as roll = 90, pitch = 0.  The pitch reading peaks between -90 and 90 degrees, because, I assume that there is a nonzero reading in that causes the function to approach arctan(infinity).  Hopefully, this is effect is reduced by using a complementary low-pass filter.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/obYSTvpr7CA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify">The below code was modified to include the adding pitch and roll measurements:</p>
+                                    </p><pre><code><p class="text-left">double getPitchAccel(){
+    double aX = getFormattedFloat( myICM.accX(), 5, 2).toDouble();
+    double aZ = getFormattedFloat( myICM.accZ(), 5, 2).toDouble();
+    double theta = atan2(aX, aZ) * 57.295779513;
+
+    if (abs(theta) > 90){
+        theta = 0;
+    }
+    
+    return theta;
+}
+
+// returns the roll in degrees using the acceleration data
+double getRollAccel(){
+    double aY = getFormattedFloat( myICM.accY(), 5, 2).toDouble();
+    double aZ = getFormattedFloat( myICM.accZ(), 5, 2).toDouble();
+    double phi = atan2(aY, aZ) * 57.295779513;
+
+    if (abs(phi) > 90){
+        phi = 0;
+    }
+    
+    return phi;
+}</p></code></pre>
+                                    <p class="text-justify">I then performed data analysis in Python and plotted the signals in the time domain as well as the power spectral density of the roll and pitch test.  I found that the frequency of the signals was pretty low, so I tried to filter out frequencies above 40 Hz.  I also implemented some logic such that if either pitch or roll is greater than 90 degrees in magnitude, they are set to 0, since these angles are only defined from [-90, 90].  This greatly helped compensate for some of the discontinuities I was seeing.  I plotted the frequency response for the original signal and the filtered signal for both pitch and roll.  After experimentation, I found the best values for the filter were Tau = 0.1, and fc = 0.16, which gave a good combination of low time delay, and filtering high-frequency noise.</p>
+                                    <p class="text-justify">Below are the pitch and roll from raw acceleration values plotted in the time and frequency domain, respectively</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/pitch_accel_fft.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/roll_accel_fft.png" alt="" />
+                                    </p><pre><code><p class="text-left">import numpy as np
+import matplotlib.pyplot as plt
+import csv
+
+# csvFile -- string of filename
+# csvCol -- column number (starting at 0) where to parse data from
+# tau -- time constant for complementary low pass filter (sec)
+# fc -- cutoff freq of complementary low pass filter 
+def low_pass_filter(csvFile,csvCol,tau,fc):
+    # open the csv file
+    data = []
+    with open(csvFile,'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        
+        next(csv_reader)
+        
+        for line in csv_reader:
+            data.append(float(line[csvCol]))
+        
+    # load the data
+    t = np.linspace(0,1,len(data))
+    dt = 1/len(data)
+    f = data
+    
+    # Perform a low pass complimentary filter on the data
+    RC = 1/(2*np.pi*fc)
+    alpha = tau/(tau+RC)
+    f_filter = [f[0]] # intitialize filtered array
+    for n in range(1,len(f)):
+        f_n = alpha*f[n] + (1-alpha)*f_filter[n-1]
+        f_filter.append(f_n)        
+    
+    # Compute the FFT
+    n = len(t)
+    f_hat_noisy = np.fft.fft(f,n)
+    PSD_noisy = f_hat_noisy * np.conj(f_hat_noisy) / n
+    freq_noisy = (1/(dt*n)) * np.arange(n)
+    L_noisy = np.arange(1,np.floor(n/2),dtype='int')
+    f_hat_filter = np.fft.fft(f_filter,n)
+    PSD_filter = f_hat_filter * np.conj(f_hat_filter) / n
+    freq_filter = (1/(dt*n)) * np.arange(n)
+    L_filter = np.arange(1,np.floor(n/2),dtype='int')
+    
+    # Plot suff
+    fig,axs = plt.subplots(2,1)
+    
+    plt.sca(axs[0]) # first plot the frequencies in the time domain
+    plt.plot(t,f,color='c',LineWidth=2,label='Noisy')
+    plt.plot(t,f_filter,color='g',LineWidth=1,label='Filtered')
+    plt.xlabel('time')
+    plt.ylabel('amplitude')
+    plt.title('Signals in Time Domain')
+    plt.legend()
+    
+    plt.sca(axs[1]) # now plot the power spectral density
+    plt.plot(freq_noisy[L_noisy],PSD_noisy[L_noisy],label='Noisy')
+    plt.plot(freq_filter[L_filter],PSD_filter[L_filter],label='Filtered')
+    plt.xlim(0,100)
+    plt.xlabel('freq (Hz)')
+    plt.ylabel('magnitude')
+    plt.title('Power Spectral Density')
+    plt.legend()
+    
+    plt.show()</p></code></pre>
+                                    <p class="text-justify">I implemented the filter into my Arduino code and found that the filter worked well!  After a series of tests, moving the sensor from [-90, 90] degrees, and shaking and tapping the sensor, I am satisfied with the filter’s ability to cut noise. </p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/1vxIp-IBul8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/TpWSC3yjr7M" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    </p><pre><code><p class="text-left">// returns a low pass filtered data, given 
+double lowPass(String dataType, double raw, double Tau, double Fc){
+    double filterPrior = 0;
+    if (dataType == "roll_accel"){
+        filterPrior = rollAccel0;
+    }
+    else if (dataType == "pitch_accel"){
+        filterPrior = pitchAccel0;
+    }
+    
+    double RC = 1/(2*M_PI*Fc);
+    double alpha = Tau/(Tau+RC);
+    double filtered = alpha*raw + (1-alpha)*filterPrior;
+
+    if (dataType == "roll_accel"){
+        rollAccel0 = filtered;
+    }
+    else if (dataType == "pitch_accel"){
+        pitchAccel0 = filtered;
+    }
+    
+    return filtered;
+}</p></code></pre>
+                                    <h5>Gyroscope</h5>
+                                    <p class="text-justify">I computed the roll, pitch, and yaw using the gyroscope data.  Compared to the accelerometer, this data was much less noisy, since we are effectively filtering by integrating the data.  The time delay between the raw acceleration roll and pitch and gyroscope roll and pitch is almost negligible, and there is a time delay when applying the low-pass filter to the acceleration values.  I notice that the gyroscope data may have an offset, depending on how the sensor was initialized.  If the sensor begins at time zero at zero pitch, roll, and yaw, then there is no offset, since these values are initialized at zero.  However, for a non-zero initialization, there is an offset. There is also small drift, caused by small integration errors that gradually increases over time. </p>
+                                    </p><pre><code><p class="text-left">// returns the pitch in degrees using the gyro data
+double getPitchGyro(){
+    double omegaY = getFormattedFloat( myICM.gyrY(), 5, 2).toDouble(); // read raw
+    double t = micros();  
+    
+    double pitchGyro = pitchGyro0 - omegaY*(t-t0_pitch)*1e-6;
+    
+    pitchGyro0 = pitchGyro; // update variables
+    t0_pitch = t;
+
+    return pitchGyro;
+}
+
+// returns the roll in degrees using the gyro data
+double getRollGyro(){
+    double omegaX = getFormattedFloat( myICM.gyrX(), 5, 2).toDouble(); // read raw
+    double t = micros();  
+    
+    double rollGyro = rollGyro0 + omegaX*(t-t0_roll)*1e-6;
+    
+    rollGyro0 = rollGyro; // update variables
+    t0_roll = t;
+
+    return rollGyro;
+}
+
+// returns the yaw in degrees using the gyro data
+double getYawGyro(){
+    double omegaZ = getFormattedFloat( myICM.gyrZ(), 5, 2).toDouble(); // read raw
+    double t = micros();  
+    
+    double yawGyro = yawGyro0 + omegaZ*(t-t0_yaw)*1e-6;
+    
+    yawGyro0 = yawGyro; // update variables
+    t0_yaw = t;
+
+    return yawGyro;
+}</p></code></pre>
+                                    <p class="text-justify"></p>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
