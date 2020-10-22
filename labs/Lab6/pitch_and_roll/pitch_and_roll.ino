@@ -16,9 +16,12 @@ double pitchAccel0 = 0;
 double rollGyro0 = 0;
 double pitchGyro0 = 0;
 double yawGyro0 = 0;
+double rollCompFilt0 = 0;
+double pitchCompFilt0 = 0;
 double t0_pitch = micros();
 double t0_roll = micros();
 double t0_yaw = micros();
+double t0_compFilt = micros();
 
 void setup() {
   SERIAL_PORT.begin(115200);
@@ -33,7 +36,7 @@ void setup() {
     SERIAL_PORT.println( myICM.statusString() );
     if( myICM.status != ICM_20948_Stat_Ok ){
       SERIAL_PORT.println( "Trying again..." );
-      delay(500);
+      delay(10);
     }else{
       initialized = true;
     }
@@ -61,11 +64,16 @@ void loop() {
     Serial.print(",");
     Serial.print(getYawGyro());
     Serial.print(",");
+    // Print pitch, roll with a complementary filter, fusing gyro and accel values
+    Serial.print(compFilter("pitch", .2));
+    Serial.print(",");
+    Serial.print(compFilter("roll", .2));
+    Serial.print(",");
     // Print yaw from magnetometer values
     Serial.print(getYawMag());
     Serial.println();
     //printScaledAGMT( myICM.agmt);   // This function takes into account the sclae settings from when the measurement was made to calculate the values with units
-    delay(30);
+    delay(10);
   }else{
     Serial.println("Waiting for data");
     delay(500);
@@ -110,35 +118,36 @@ String getFormattedFloat(float val, uint8_t leading, uint8_t decimals){
 // returns the pitch in degrees using the acceleration data
 double getPitchAccel(){
   double aX = getFormattedFloat( myICM.accX(), 5, 2).toDouble();
+  double aY = getFormattedFloat( myICM.accY(), 5, 2).toDouble();
   double aZ = getFormattedFloat( myICM.accZ(), 5, 2).toDouble();
-  double theta = atan2(aX, aZ) * 57.295779513;
+  double aMag = sqrt(pow(aX,2) + pow(aY,2) + pow(aZ,2));
 
-  if (abs(theta) > 90){
-    theta = 0;
-  }
+  double theta = -asin(aX/aMag) * 57.295779513;
   
   return theta;
 }
 
 // returns the roll in degrees using the acceleration data
 double getRollAccel(){
+  double aX = getFormattedFloat( myICM.accX(), 5, 2).toDouble();
   double aY = getFormattedFloat( myICM.accY(), 5, 2).toDouble();
   double aZ = getFormattedFloat( myICM.accZ(), 5, 2).toDouble();
-  double phi = atan2(aY, aZ) * 57.295779513;
+  double aMag = sqrt(pow(aX,2) + pow(aY,2) + pow(aZ,2));
 
-  if (abs(phi) > 90){
-    phi = 0;
-  }
-  
+  double phi = -asin(aY/aMag) * 57.295779513;
+
   return phi;
 }
 
 // returns the pitch in degrees using the gyro data
 double getPitchGyro(){
+  if (pitchGyro0 == 0){
+    pitchGyro0 = getPitchAccel(); // initialize to the pitch from accel on start
+  }
   double omegaY = getFormattedFloat( myICM.gyrY(), 5, 2).toDouble(); // read raw
   double t = micros();  
   
-  double pitchGyro = pitchGyro0 - omegaY*(t-t0_pitch)*1e-6;
+  double pitchGyro = -(pitchGyro0 - omegaY*(t-t0_pitch)*1e-6);
   
   pitchGyro0 = pitchGyro; // update variables
   t0_pitch = t;
@@ -148,10 +157,13 @@ double getPitchGyro(){
 
 // returns the roll in degrees using the gyro data
 double getRollGyro(){
+  if (rollGyro0 == 0){
+    rollGyro0 == getRollAccel(); // initialize to the roll from accel on start
+  }
   double omegaX = getFormattedFloat( myICM.gyrX(), 5, 2).toDouble(); // read raw
   double t = micros();  
   
-  double rollGyro = rollGyro0 + omegaX*(t-t0_roll)*1e-6;
+  double rollGyro = -(rollGyro0 + omegaX*(t-t0_roll)*1e-6);
   
   rollGyro0 = rollGyro; // update variables
   t0_roll = t;
@@ -172,9 +184,10 @@ double getYawGyro(){
   return yawGyro;
 }
 
-// returns a low pass filtered data, given 
+// returns a low pass filtered data 
 double lowPass(String dataType, double raw, double Tau, double Fc){
   double filterPrior = 0;
+  
   if (dataType == "roll_accel"){
     filterPrior = rollAccel0;
   }
@@ -184,7 +197,7 @@ double lowPass(String dataType, double raw, double Tau, double Fc){
   
   double RC = 1/(2*M_PI*Fc);
   double alpha = Tau/(Tau+RC);
-  double filtered = alpha*raw + (1-alpha)*filterPrior;
+  double filtered = alpha*raw + (1-alpha)*filterPrior; // LPF formula
 
   if (dataType == "roll_accel"){
     rollAccel0 = filtered;
@@ -194,6 +207,41 @@ double lowPass(String dataType, double raw, double Tau, double Fc){
   }
   
   return filtered;
+}
+
+// fuses angles from accelerometer and gyro
+double compFilter(String dataType, double alpha){
+  double angleAccel = 0;
+  double angleGyro = 0;
+  double angle0 = 0;
+  double angleFilt = 0;
+  double t = micros();
+
+  // set the variables to correct values
+  if (dataType == "roll"){
+    angleAccel = lowPass("roll_accel", getRollAccel(), 0.1, 0.16); // get low pass filtered angle from accel values
+    angleGyro = getRollGyro();
+    angle0 = rollCompFilt0;
+  }
+  else if (dataType == "pitch"){
+    angleAccel = lowPass("pitch_accel", getPitchAccel(), 0.1, 0.16); // get low pass filtered angle from accel values
+    angleGyro = getPitchGyro();
+    angle0 = pitchCompFilt0;
+  }
+
+  // compute the filtered angle value
+  angleFilt = (angle0 + angleGyro*(t - t0_compFilt)*(1e-6))*(1 - alpha) + angleAccel*alpha; // comp filt formula
+
+  // update global variables
+  if (dataType == "roll"){
+    rollCompFilt0 = angleFilt;
+  }
+  else if (dataType == "pitch"){
+    pitchCompFilt0 = angleFilt;
+  }
+  t0_compFilt = t;
+  
+  return angleFilt; 
 }
 
 // returns the yaw from the magnetometer
@@ -213,7 +261,7 @@ double getYawMag(){
   
   double xm = magnX*cos(pitchAccelFilt) - magnY*sin(rollAccelFilt)*sin(pitchAccelFilt) + magnZ*cos(rollAccelFilt)*sin(pitchAccelFilt); // theta=pitch and roll=phi
   double ym = magnY*cos(rollAccelFilt) + magnZ*sin(rollAccelFilt);
-  double yawMag = atan2(ym, xm); 
+  double yawMag = atan2(ym, xm)*180/M_PI; 
 
   return yawMag;
 }

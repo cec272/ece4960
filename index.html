@@ -1107,34 +1107,33 @@ perform_obstacle_avoidance(robot)</p></code></pre>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/imu_coords.png" alt="" />
                                     <p class="text-justify">Below is a video of the script being run and the output from the serial monitor.</p>
                                     <h5>Accelerometer</h5>
-                                    <p class="text-justify">Using SerialPlot, I was able to plot changing roll and pitch from at angles [-90, 0, 90] over time.  The sensor responds relatively well, but it is apparent there is much noise in the readings.  Also, there is some interference when we move the acceleration in only one direction, such as roll = 90, pitch = 0.  The pitch reading peaks between -90 and 90 degrees, because, I assume that there is a nonzero reading in that causes the function to approach arctan(infinity).  Hopefully, this is effect is reduced by using a complementary low-pass filter.</p>
+                                    <p class="text-justify">Using SerialPlot, I was able to plot changing roll and pitch from at angles [-90, 0, 90] over time.  The sensor responds relatively well, but it is apparent there is much noise in the readings.  Also, there is some interference when we move the acceleration in only one direction, such as roll = 90, pitch = 0.  The pitch reading peaks between -90 and 90 degrees, because, I assume that there is a nonzero reading in that causes the function to approach arctan(infinity).  I had originally thought the effect would be reduced by using a complementary low-pass filter, however, it was not.  I rewrote the equations, this time substituting an arcsin function for the arctan function.  This allowed the function to be more continuous, instead of spiking as the angles were greater than [-90, 90] degrees.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/obYSTvpr7CA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <p class="text-justify">The below code was modified to include the adding pitch and roll measurements:</p>
-                                    </p><pre><code><p class="text-left">double getPitchAccel(){
+                                    </p><pre><code><p class="text-left">// returns the pitch in degrees using the acceleration data
+double getPitchAccel(){
     double aX = getFormattedFloat( myICM.accX(), 5, 2).toDouble();
+    double aY = getFormattedFloat( myICM.accY(), 5, 2).toDouble();
     double aZ = getFormattedFloat( myICM.accZ(), 5, 2).toDouble();
-    double theta = atan2(aX, aZ) * 57.295779513;
+    double aMag = sqrt(pow(aX,2) + pow(aY,2) + pow(aZ,2));
 
-    if (abs(theta) > 90){
-        theta = 0;
-    }
+    double theta = asin(aX/aMag) * 57.295779513;
     
     return theta;
 }
 
 // returns the roll in degrees using the acceleration data
 double getRollAccel(){
+    double aX = getFormattedFloat( myICM.accX(), 5, 2).toDouble();
     double aY = getFormattedFloat( myICM.accY(), 5, 2).toDouble();
     double aZ = getFormattedFloat( myICM.accZ(), 5, 2).toDouble();
-    double phi = atan2(aY, aZ) * 57.295779513;
+    double aMag = sqrt(pow(aX,2) + pow(aY,2) + pow(aZ,2));
 
-    if (abs(phi) > 90){
-        phi = 0;
-    }
-    
+    double phi = asin(aY/aMag) * 57.295779513;
+
     return phi;
 }</p></code></pre>
-                                    <p class="text-justify">I then performed data analysis in Python and plotted the signals in the time domain as well as the power spectral density of the roll and pitch test.  I found that the frequency of the signals was pretty low, so I tried to filter out frequencies above 40 Hz.  I also implemented some logic such that if either pitch or roll is greater than 90 degrees in magnitude, they are set to 0, since these angles are only defined from [-90, 90].  This greatly helped compensate for some of the discontinuities I was seeing.  I plotted the frequency response for the original signal and the filtered signal for both pitch and roll.  After experimentation, I found the best values for the filter were Tau = 0.1, and fc = 0.16, which gave a good combination of low time delay, and filtering high-frequency noise.</p>
+                                    <p class="text-justify">I then performed data analysis in Python and plotted the signals in the time domain as well as the power spectral density of the roll and pitch test.  I found that the frequency of the signals was pretty low, so I tried to filter out frequencies above 40 Hz.  I plotted the frequency response for the original signal and the filtered signal for both pitch and roll.  After experimentation, I found the best values for the filter were Tau = 0.1, and fc = 0.16, which gave a good combination of low time delay, and filtering high-frequency noise. </p>
                                     <p class="text-justify">Below are the pitch and roll from raw acceleration values plotted in the time and frequency domain, respectively</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/pitch_accel_fft.png" alt="" />
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/roll_accel_fft.png" alt="" />
@@ -1229,7 +1228,8 @@ double lowPass(String dataType, double raw, double Tau, double Fc){
     return filtered;
 }</p></code></pre>
                                     <h5>Gyroscope</h5>
-                                    <p class="text-justify">I computed the roll, pitch, and yaw using the gyroscope data.  Compared to the accelerometer, this data was much less noisy, since we are effectively filtering by integrating the data.  The time delay between the raw acceleration roll and pitch and gyroscope roll and pitch is almost negligible, and there is a time delay when applying the low-pass filter to the acceleration values.  I notice that the gyroscope data may have an offset, depending on how the sensor was initialized.  If the sensor begins at time zero at zero pitch, roll, and yaw, then there is no offset, since these values are initialized at zero.  However, for a non-zero initialization, there is an offset. There is also small drift, caused by small integration errors that gradually increases over time. </p>
+                                    <p class="text-justify">I computed the roll, pitch, and yaw using the gyroscope data.  Compared to the accelerometer, this data was much less noisy, since we are effectively filtering by integrating the data.  The time delay between the raw acceleration roll and pitch and gyroscope roll and pitch is almost negligible, and there is a time delay when applying the low-pass filter to the acceleration values.  I notice that the gyroscope data may have an offset, depending on how the sensor was initialized.  If the sensor begins at time zero at zero pitch, roll, and yaw, then there is no offset, since these values are initialized at zero.  However, for a non-zero initialization, there is an offset. There is also small drift, caused by small integration errors that gradually increases over time.  I also tried decreasing the delay in the system from 30 ms to 10 ms, which effectively increased the sampling rate by 3 x.  I noticed a marginal increase in responsiveness, but the sampling rate was originally high enough that I could not visually inspect a difference.  If I decreased the delay to 0, I noticed a much higher increase in the accelerometer measurement noise, so I decided that 10 ms was an ideal delay.  </p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/CDXV4Z1GKpA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     </p><pre><code><p class="text-left">// returns the pitch in degrees using the gyro data
 double getPitchGyro(){
     double omegaY = getFormattedFloat( myICM.gyrY(), 5, 2).toDouble(); // read raw
@@ -1267,6 +1267,43 @@ double getYawGyro(){
     t0_yaw = t;
 
     return yawGyro;
+}</p></code></pre>
+                                    <p class="text-justify">I then added a complementary filter, which combines the integrated, high pass filtered gyroscope data with the low pass filtered accelerometer data.  This is a much computationally easier method than performing a Kalman filter with the two data.  I tuned the value of alpha until I was satisfied with the amount of accuracy, stability, and drift, which was alpha = 0.1 for pitch, and alpha = 0.2 for roll.  From the video below, we can see that the complementary filter effectively fuses the outputs from the accelerometer with the gyroscope.  We can see that there are much less noise and greater accuracy than the raw accelerometer output, and it is not affected by the gyroscope’s drift over time.  However, we can also see that there is more time delay, which could make a controller unstable, as it reduces the phase margin of the loop transfer function. </p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/K2vrS8obBcg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/9lOTeNfY9Y0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    </p><pre><code><p class="text-left">// fuses angles from accelerometer and gyro
+double compFilter(String dataType, double alpha){
+    double angleAccel = 0;
+    double angleGyro = 0;
+    double angle0 = 0;
+    double angleFilt = 0;
+    double t = micros();
+
+    // set the variables to correct values
+    if (dataType == "roll"){
+        angleAccel = lowPass("roll_accel", getRollAccel(), 0.1, 0.16); // get low pass filtered angle from accel values
+        angleGyro = getRollGyro();
+        angle0 = rollCompFilt0;
+    }
+    else if (dataType == "pitch"){
+        angleAccel = lowPass("pitch_accel", getPitchAccel(), 0.1, 0.16); // get low pass filtered angle from accel values
+        angleGyro = getPitchGyro();
+        angle0 = pitchCompFilt0;
+    }
+
+    // compute the filtered angle value
+    angleFilt = (angle0 + angleGyro*(t - t0_compFilt)*(1e-6))*(1 - alpha) + angleAccel*alpha; // comp filt formula
+
+    // update global variables
+    if (dataType == "roll"){
+        rollCompFilt0 = angleFilt;
+    }
+    else if (dataType == "pitch"){
+        pitchCompFilt0 = angleFilt;
+    }
+    t0_compFilt = t;
+    
+    return angleFilt; 
 }</p></code></pre>
                                     <p class="text-justify"></p>
                                     <button class="btn btn-primary" data-dismiss="modal">
