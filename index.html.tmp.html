@@ -1306,8 +1306,139 @@ double compFilter(String dataType, double alpha){
     return angleFilt; 
 }</p></code></pre>
                                     <h5>Magnetometer</h5>
+                                    <p class="text-justify">I added the magnetometer equations to estimate the yaw angle.  Unfortunately, I was not able to reliably estimate the yaw angle because the readings from this quickly jumped between [-180 and 180] degrees, without any intermediary useful data.  After many hours of troubleshooting and consulting, I believe my magnetometer is nonfunctional, so I will only use gyroscope data to estimate yaw angle.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/_ELoqRoMWMs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    </p><pre><code><p class="text-left">// returns the yaw from the magnetometer
+double getYawMag(){
+    // normalize the mag readings
+    double magnX = getFormattedFloat( myICM.magX(), 5, 2).toDouble()*10e-6; // read raw
+    double magnY = getFormattedFloat( myICM.magY(), 5, 2).toDouble()*10e-6; // read raw
+    double magnZ = getFormattedFloat( myICM.magZ(), 5, 2).toDouble()*10e-6; // read raw
+    double magn_norm = sqrt((magnX*magnX) + (magnY*magnY) + (magnZ*magnZ))*10e-6;
+    magnX = magnX/magn_norm;
+    magnY = magnY/magn_norm;
+    magnZ = magnZ/magn_norm;
+
+    // get filtered roll and pitch from accelerometer in radians
+    double pitchAccelFilt = lowPass("pitch_accel", getPitchAccel(), 0.1, 0.16)*M_PI/180;
+    double rollAccelFilt = lowPass("roll_accel", getRollAccel(), 0.1, 0.16)*M_PI/180;
+    
+    double xm = magnX*cos(pitchAccelFilt) - magnY*sin(rollAccelFilt)*sin(pitchAccelFilt) + magnZ*cos(rollAccelFilt)*sin(pitchAccelFilt); // theta=pitch and roll=phi
+    double ym = magnY*cos(rollAccelFilt) + magnZ*sin(rollAccelFilt);
+    double yawMag = atan2(ym, xm)*180/M_PI; 
+
+    return yawMag;
+}</p></code></pre>
+                                    <h5>PID Control</h5>
+                                    <h6>Ramp Response</h6>
+                                    <p class="text-justify">I added a function rampMotors() to my code and ramped the motor speeds in opposite directions from 0 to 255. I also used the gyroscope to determine the yaw anglur rate and plotted them at the same time.   I tried increasing the delays between motor value changes, but above 50 ms only increased the noise in the yaw rate measurement. I modified the code to utilize bluetooth to send and receive the motor control input and yaw rate, since it is difficult to maintain a wired connection with the robot while it is moving.  One thing I noticed was that the bluetooth range was not very far, and would disconnect, if, for example the robot was placed on the floor and the bluetooth module was on a desk.  I also created a bash script to pipe the received data into a text file, and a MATLAB script to parse and plot the data.  This speeded-up my tests exponentially, as I was able to start the bluetooth connection and plot the data with the press of two buttons.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/ramp_response_1.png" alt="" />
+                                    <p class="text-justify">From the above plot, we can see that the maximum rotational rotational speed was 250 deg/sec.  This occurs when the motors are set to 196, which is the saturation value for our plant.  Our deadband occurs from when the motors are set from 0 to 170, which means our range for the motors is only [170, 196].  Not seen in the graph is that the left motor begins to spin before the right motor.  Although the motor spins while the robot is lifted, the motor value for the robot to spin while on the ground (on tile) is much higher.  This is likely due to the additional friction and moment of inertia of the entire vehicle.</p>
+                                    <p class="text-justify">Below is the bluetooth and ramp code added to the Arduino script:</p>
+                                    </p><pre><code><p class="text-left">if (bytestream_active) // send data over Bluetooth
+{
+    res_cmd->command_type = BYTESTREAM_TX;
+    res_cmd->length = 20;
+    int motor_data = motor_speed;
+    double yaw_data = yaw_rate;
+    double t1 = micros()*1e-6;
+    memcpy(res_cmd->data,&t1,8);
+    memcpy(res_cmd->data+8,&motor_data,4);
+    memcpy(res_cmd->data+12,&yaw_data,8);
+    amdtpsSendData((uint8_t *)res_cmd, 22);
+    // Log time
+    long t = micros();
+    Serial.printf("Package: %3d, Time: %3d\n",package,t);
+    package++;
+}
+
+// ramps the motors from 0 to 255 to 0
+void rampMotors(){
+    // ramp up
+    if (ramp_up){
+        myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+        myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+        delay(50);
+        motor_speed++;
+        if (motor_speed > 255){
+            ramp_up = false;
+        }
+    }
+    // ramp down
+    else{
+        myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+        myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+        delay(50);
+        motor_speed--;
+        if (motor_speed < 0){
+            ramp_up = true;
+        }
+    }
+}</p></code></pre>
+                                    <p class="text-justify">Below is the bash script used to pipe text from the terminal to a file:</p>
+                                    </p><pre><code><p class="text-left">#!/bin/bash
+
+echo "Starting: /media/sf_ece4960/labs/Lab6/main.py"
+echo "Saving to: /media/sf_ECE_4960_-_Fast_Robots/Lab6Report/bluetooth_data.txt"
+python3 -u /media/sf_ece4960/labs/Lab6/main.py | tee /media/sf_ECE_4960_-_Fast_Robots/Lab6Report/bluetooth_data.txt</p></code></pre>
+                                    <p class="text-justify">Below is the MATLAB script used to plot the data:</p>
+                                    </p><pre><code><p class="text-left">clear all
+
+data_array=[];
+
+% parse the data
+data = importdata('bluetooth_data.txt');
+[n_row,n_col]=size(data);
+for i = 1:n_row
+    text = data{i,1};
+    % get rid of non float characters
+    text = strrep(text,'(','');
+    text = strrep(text,')','');
+    text = strrep(text,',',' ');
+    % convert to float
+    parsed = sscanf(text,'%f')';
+    % append to array
+    data_array = [data_array; parsed];
+end
+
+% alternatively, load saved data
+%data = load('step_response_200.mat');
+%data_array = data.data_array;
+
+% find only the relevant parts to plot
+t = data_array(:,1);
+t_trigger = find(t>=0 & t&#60;=1000);
+t_show = t(t_trigger(1):t_trigger(end));
+motor_speed_show = data_array(t_trigger(1):t_trigger(end),2);
+yaw_rate_show = data_array(t_trigger(1):t_trigger(end),3);
+
+% find the yaw rate during the step response
+t_step = find(motor_speed_show > 0);
+yaw_rate_step = yaw_rate_show(t_step(1):t_step(end),1);
+
+% plot the stuff
+figure()
+hold on
+yyaxis left
+p1 = plot(t_show, motor_speed_show,'LineWidth',2);
+ylabel('Motor Speed')
+ylim([min(data_array(t_trigger(1):t_trigger(end),2)) - 10, max(data_array(t_trigger(1):t_trigger(end),2)) + 10])
+yyaxis right
+p2 = plot(t_show, yaw_rate_show);
+ylabel('Yaw Rate (deg/s)')
+xlabel('time (s)')
+title('Step Response, u=220')
+hold off
+
+% print the average and std. dev of the yaw rate for the step response
+fprintf('Average yaw rate is %5.2f\n', mean(yaw_rate_step));
+fprintf('Std dev of yaw rate is %5.2f\n', std(yaw_rate_step));</p></code></pre>
+                                    <h6>Minimum Motor Speed for Reliable Rotation</h6>
+                                    <p class="text-justify">I then tried to find the lowest possible speed the robot can reliably rotate about its own axis.  For this, I wrote a function stepMotors() that steps the robot after waiting for 10 seconds, then provides a step input to the motors of the magnitude specified.  I tested the robot at motor inputs of [160, 170, 180, 190, 200, 210, 220], which within the valid the range I found through ramping the motors.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/step_response_combined.png" alt="" />
                                     
                                     <p class="text-justify"></p>
+                                    </p><pre><code><p class="text-left"></p></code></pre>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
@@ -1341,7 +1472,7 @@ double compFilter(String dataType, double alpha){
                                     <!-- Portfolio Modal - Image-->
                                     <img class="img-fluid rounded mb-5" src="assets/img/portfolio/submarine.png" alt="" />
                                     <!-- Portfolio Modal - Text-->
-                                    <h5>Grid Localization using Bayes Filter</h5>
+                                    <h5>Grid Localization Using Bayes Filter</h5>
                                     <p class="text-justify">I extracted and set-up the base code per the lab instructions.  I did have an issue with setting-up the code that was solved by deleting the folders found in the /home/artemis/catkin_ws folder.  I made sure to back-up my previous code.</p>
                                     <p class="text-justify">Below is my pseudocode for the Bayes Filter:</p>
                                     </p><pre><code><p class="text-left"># In world coordinates

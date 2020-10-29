@@ -56,6 +56,9 @@ double yaw_rate = 0;
 #define RIGHT_MIN 84
 int motor_speed = 0;
 boolean ramp_up = true;
+double t0_motors = micros();
+double t_motors_start = micros();
+boolean motors_start = false;
 
 // Bluetooth vairables to keep track of
 #define MAXREPLY 100 // maximum length of reply / data message
@@ -182,6 +185,7 @@ void loop() {
     myICM.getAGMT();
     // Get Yaw angle
     yaw_rate = getFormattedFloat( myICM.gyrZ(), 5, 2).toDouble();
+    
     Serial.print(yaw_rate);
   }
   else{
@@ -190,7 +194,8 @@ void loop() {
   }
 
   /// *** Perform Control Action *** ///
-  rampMotors();
+  //rampMotors();
+  stepMotors(220, 10);
   Serial.print(",");
   Serial.print(motor_speed);
   Serial.println();
@@ -272,7 +277,6 @@ void loop() {
         memcpy(res_cmd->data+8,&motor_data,4);
         memcpy(res_cmd->data+12,&yaw_data,8);
         amdtpsSendData((uint8_t *)res_cmd, 22);
-
         // Log time
         long t = micros();
         Serial.printf("Package: %3d, Time: %3d\n",package,t);
@@ -282,6 +286,31 @@ void loop() {
     delay(10);
 }
 /// *** Helper Functions for Controlling the Motors *** ///
+// steps the motor according to the speed defined by motor_input [0-255] and for time in time_step (s)
+void stepMotors(double motor_input, double time_step){
+  // local variables
+  double t = micros();
+  // waits 10 seconds before starting
+  if ((t - t0_motors >= 10*1e6) && (!motors_start)){
+    motors_start = true;
+    t_motors_start = micros();
+  }
+  // steps motors after 10 sec for as long as specified
+  else if ((motors_start) && (t - t_motors_start <= time_step*1e6)){
+    motor_speed = motor_input;
+    myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+    myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+    delay(50);
+  }
+  // otherwise set the motors to speed 0
+  else{
+    motor_speed = 0;
+    myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+    myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+  }
+}
+
+// ramps the motors from 0 to 255 to 0
 void rampMotors(){
   // ramp up
   if (ramp_up){
