@@ -1306,7 +1306,29 @@ double compFilter(String dataType, double alpha){
     return angleFilt; 
 }</p></code></pre>
                                     <h5>Magnetometer</h5>
-                                    
+                                    <p class="text-justify">I added the magnetometer equations to estimate the yaw angle.  Unfortunately, I was not able to reliably estimate the yaw angle because the readings from this quickly jumped between [-180 and 180] degrees, without any intermediary useful data.  After many hours of troubleshooting and consulting, I believe my magnetometer is nonfunctional, so I will only use gyroscope data to estimate yaw angle.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/_ELoqRoMWMs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    </p><pre><code><p class="text-left">// returns the yaw from the magnetometer
+double getYawMag(){
+    // normalize the mag readings
+    double magnX = getFormattedFloat( myICM.magX(), 5, 2).toDouble()*10e-6; // read raw
+    double magnY = getFormattedFloat( myICM.magY(), 5, 2).toDouble()*10e-6; // read raw
+    double magnZ = getFormattedFloat( myICM.magZ(), 5, 2).toDouble()*10e-6; // read raw
+    double magn_norm = sqrt((magnX*magnX) + (magnY*magnY) + (magnZ*magnZ))*10e-6;
+    magnX = magnX/magn_norm;
+    magnY = magnY/magn_norm;
+    magnZ = magnZ/magn_norm;
+
+    // get filtered roll and pitch from accelerometer in radians
+    double pitchAccelFilt = lowPass("pitch_accel", getPitchAccel(), 0.1, 0.16)*M_PI/180;
+    double rollAccelFilt = lowPass("roll_accel", getRollAccel(), 0.1, 0.16)*M_PI/180;
+    
+    double xm = magnX*cos(pitchAccelFilt) - magnY*sin(rollAccelFilt)*sin(pitchAccelFilt) + magnZ*cos(rollAccelFilt)*sin(pitchAccelFilt); // theta=pitch and roll=phi
+    double ym = magnY*cos(rollAccelFilt) + magnZ*sin(rollAccelFilt);
+    double yawMag = atan2(ym, xm)*180/M_PI; 
+
+    return yawMag;
+}</p></code></pre>
                                     <p class="text-justify"></p>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
