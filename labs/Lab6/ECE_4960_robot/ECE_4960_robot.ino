@@ -33,6 +33,13 @@ ICM_20948_I2C myICM;  // IMU
 #define SHUTDOWN_PIN 2
 #define INTERRUPT_PIN 3
 
+// PID variables to keep track of
+double error0 = 0;
+double integrate_error0 = 0;
+double diff_error = 0;
+double t0_PID = micros();
+double reference = 0;
+
 // IMU variables to keep track of
 double rollAccel0 = 0;
 double pitchAccel0 = 0;
@@ -41,11 +48,13 @@ double pitchGyro0 = 0;
 double yawGyro0 = 0;
 double rollCompFilt0 = 0;
 double pitchCompFilt0 = 0;
+double yawRateGyro0 = 0;
+double yaw_rate_data = 0;
+double yaw_rate_data_filt = 0;
 double t0_pitch = micros();
 double t0_roll = micros();
 double t0_yaw = micros();
 double t0_compFilt = micros();
-double yaw_rate = 0;
 
 // Motor variables to keep track of
 #define LEFT_MOTOR 1
@@ -184,9 +193,9 @@ void loop() {
     // Update IMU values
     myICM.getAGMT();
     // Get Yaw angle
-    yaw_rate = getFormattedFloat( myICM.gyrZ(), 5, 2).toDouble();
-    
-    Serial.print(yaw_rate);
+    yaw_rate_data = getFormattedFloat( myICM.gyrZ(), 5, 2).toDouble();
+    yaw_rate_data_filt = lowPass("yaw_rate_gyro", yaw_rate_data, 0.1, 0.16);
+    Serial.print(yaw_rate_data);
   }
   else{
     Serial.println("Waiting for data");
@@ -195,9 +204,17 @@ void loop() {
 
   /// *** Perform Control Action *** ///
   //rampMotors();
-  stepMotors(220, 10);
+  //stepMotors(220, 10);
+  //motor_feedback(200 , yaw_rate_data, 0.6, 5, 0, 10);
+  single_motor_feedback("left", 30, yaw_rate_data, 0.6,  5, 0, 10);
   Serial.print(",");
   Serial.print(motor_speed);
+  Serial.print(",");
+  Serial.print(error0);
+  Serial.print(",");
+  Serial.print(integrate_error0);
+  Serial.print(",");
+  Serial.print(diff_error);
   Serial.println();
 
   /// *** Send Data Back Over Bluetooth *** ///
@@ -269,14 +286,18 @@ void loop() {
     if (bytestream_active)
     {
         res_cmd->command_type = BYTESTREAM_TX;
-        res_cmd->length = 20;
+        res_cmd->length = 26;
         int motor_data = motor_speed;
-        double yaw_data = yaw_rate;
+        double yaw_data = yaw_rate_data;
         double t1 = micros()*1e-6;
+        double ref_sig = reference;
+        double control_error = error0;
         memcpy(res_cmd->data,&t1,8);
         memcpy(res_cmd->data+8,&motor_data,4);
         memcpy(res_cmd->data+12,&yaw_data,8);
-        amdtpsSendData((uint8_t *)res_cmd, 22);
+        memcpy(res_cmd->data+20,&ref_sig,8);
+        memcpy(res_cmd->data+28, &control_error,8);
+        amdtpsSendData((uint8_t *)res_cmd, 38);
         // Log time
         long t = micros();
         Serial.printf("Package: %3d, Time: %3d\n",package,t);
@@ -285,6 +306,131 @@ void loop() {
     trigger_timers();
     delay(10);
 }
+
+/// *** Helper Functions for PID control *** ///
+// PID control for dual motors.  Apply reference signal after waiting 10 seconds for as long as defined by time_step.
+void motor_feedback(double set_point, double sensor, double Kp, double Ki, double Kd, double time_step){
+  double t = micros();
+  // waits 10 seconds before starting
+  if ((t - t0_motors >= 10*1e6) && (!motors_start)){
+    motors_start = true;
+    t_motors_start = micros();
+  }
+  // run PID control
+  else if((motors_start) && (t - t_motors_start <= time_step*1e6)){
+    // compute error
+    double t_PID = micros();
+    double error = set_point - sensor;
+    double error_filt = lowPass("yaw_rate_gyro", sensor, 0.1, 0.16);
+    double integrate_error = integrate_error0 + error*(t_PID - t0_PID)*1e-6;
+    diff_error = (error_filt - error0)/((t_PID - t0_PID)*1e-6);
+    // sum controller as the sum of the P, I, D terms
+    double controller = Kp*error + Ki*integrate_error + Kd*diff_error;
+    // multiply the controller by the plant
+    double plant = 1;
+    double output = controller * plant;
+    // implement anti-windup
+    if (output < 0){
+      motor_speed = 0;
+      integrate_error = 0;
+    }
+    else if (output > 255){
+      motor_speed = 255;
+      integrate_error = 0;
+    }
+    else{
+      motor_speed = round(output);
+    }
+    // set the motor speed
+    myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+    myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+    delay(5);
+    // update time, error, and set-point
+    Serial.print((t_PID - t0_PID)*1e-6);
+    Serial.println();
+    error0 = error;
+    integrate_error0 = integrate_error;
+    t0_PID = t_PID;
+    reference = set_point;
+  }
+  // otherwise set the motors to speed 0
+  else{
+    error0 = 0;
+    integrate_error0 = 0;
+    diff_error = 0;
+    motor_speed = 0;
+    reference = 0;
+    myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+    myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+  }
+}
+
+// PID control for single motor, specified by motor.  Apply reference signal after waiting 10 seconds for as long as defined by time_step.
+void single_motor_feedback(String motor, double set_point, double sensor, double Kp, double Ki, double Kd, double time_step){
+  double t = micros();
+  // waits 10 seconds before starting
+  if ((t - t0_motors >= 10*1e6) && (!motors_start)){
+    motors_start = true;
+    t_motors_start = micros();
+  }
+  // run PID control
+  else if((motors_start) && (t - t_motors_start <= time_step*1e6)){
+    // compute error
+    double t_PID = micros();
+    double error = set_point - sensor;
+    double error_filt = lowPass("yaw_rate_gyro", sensor, 0.1, 0.16);
+    double integrate_error = integrate_error0 + error*(t_PID - t0_PID)*1e-6;
+    diff_error = (error_filt - error0)/((t_PID - t0_PID)*1e-6);
+    // sum controller as the sum of the P, I, D terms
+    double controller = Kp*error + Ki*integrate_error + Kd*diff_error;
+    // multiply the controller by the plant
+    double plant = 1;
+    double output = controller * plant;
+    // implement anti-windup
+    if (output < 0){
+      motor_speed = 0;
+      integrate_error = 0;
+    }
+    else if (output > 255){
+      motor_speed = 255;
+      integrate_error = 0;
+    }
+    else{
+      motor_speed = round(output);
+    }
+    // set the motor speed
+    if (motor == "left"){
+      myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+      myMotorDriver.setDrive( RIGHT_MOTOR, FWD, 50);
+    }
+    else if (motor == "right"){
+      myMotorDriver.setDrive( LEFT_MOTOR, REV, 50);
+      myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+    }
+    else{
+      Serial.print("incorrect motor specifed");
+    }
+    delay(5);
+    // update time, error, and set-point
+    Serial.print((t_PID - t0_PID)*1e-6);
+    Serial.println();
+    error0 = error;
+    integrate_error0 = integrate_error;
+    t0_PID = t_PID;
+    reference = set_point;
+  }
+  // otherwise set the motors to speed 0
+  else{
+    error0 = 0;
+    integrate_error0 = 0;
+    diff_error = 0;
+    motor_speed = 0;
+    reference = 0;
+    myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+    myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+  }
+}
+
 /// *** Helper Functions for Controlling the Motors *** ///
 // steps the motor according to the speed defined by motor_input [0-255] and for time in time_step (s)
 void stepMotors(double motor_input, double time_step){
@@ -447,6 +593,9 @@ double lowPass(String dataType, double raw, double Tau, double Fc){
   else if (dataType == "pitch_accel"){
     filterPrior = pitchAccel0;
   }
+  else if (dataType == "yaw_rate_gyro"){
+    filterPrior = yawRateGyro0;
+  }
   
   double RC = 1/(2*M_PI*Fc);
   double alpha = Tau/(Tau+RC);
@@ -457,6 +606,9 @@ double lowPass(String dataType, double raw, double Tau, double Fc){
   }
   else if (dataType == "pitch_accel"){
     pitchAccel0 = filtered;
+  }
+  else if (dataType == "yaw_rate_gyro"){
+    yawRateGyro0 = filtered;
   }
   
   return filtered;

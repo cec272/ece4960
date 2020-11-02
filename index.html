@@ -1097,7 +1097,7 @@ perform_obstacle_avoidance(robot)</p></code></pre>
                                         <div class="divider-custom-line"></div>
                                     </div>
                                     <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/submarine.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/robot_rotate.gif" alt="" />
                                     <!-- Portfolio Modal - Text-->
                                     <h5>Setting-up the IMU</h5>
                                     <p class="text-justify">I connected the IMU using the Qwiic port and scanned the devices using ‘Example1_Wire.’  The IMU was recognized as an I2C device at 0x69.  This is what is expected from the <a href="https://learn.sparkfun.com/tutorials/sparkfun-9dof-imu-icm-20948-breakout-hookup-guide">datasheet</a>. </p>
@@ -1370,7 +1370,7 @@ void rampMotors(){
         myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
         delay(50);
         motor_speed--;
-        if (motor_speed < 0){
+        if (motor_speed &#60; 0){
             ramp_up = true;
         }
     }
@@ -1464,6 +1464,140 @@ void stepMotors(double motor_input, double time_step){
                                     <p class="text-justify">The minimum speed of reliable rotation that I found was 201 deg/s.  From Lab 5, I found that the ranging time was on average 20.287 ms with a standard deviation of 1.131 ms. </p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/tof_calcs.jpeg" alt="" />
                                     <p class="text-justify">From the above diagram, we calculated calculated the difference in the orientation and ranging difference for two different scenarios, when the robot is 0 degrees and 45 degrees from the wall.  The robot will change in orientation by 4.078 degrees at its minimum reliable rotation speed.  The amount the ranging distance changes depends on the angle with respect to the wall and increases by 0.26% at 0 degrees (0.5013 m) and 0.82% at 45 degrees (0.5041 m).  The ToF sensor has two parameters, “signal and sigma,” which are used to filter invalid measurements.  The sigma represents the standard deviation of consecutive measurements, and by default is set to 15 mm.  The standard deviation in our two scenarios in the diagram would be 0.9 mm and 2.9 mm, which is within the default sigma value for a valid measurement.  Therefore, in this configuration and at the minimum reliable rotation speed of 201 deg/s, the ToF sensor should be able to return valid ranging measurements.  </p>
+                                    <h6>PID Control, Dual Motors</h6>
+                                    <p class="text-justify">I created a PID controller as a function that takes in as inputs a set-point, the sensor reading, values for kp, ki, kd, and the amount of time in seconds the set-point should be applied for.  Although this controller works for proportional, integral, and derivative terms, I decided to just use a P-I control (by setting kd=0) for simplicity and avoiding errors that occur from differentiating noisy yaw rate sensor data.  P-I control is chosen over solely P-control because the integral term will allow steady-state error to approach 0.  I tried filtering the yaw rate data using a low pass fillter to reduce the effect of noise that is introduced into the feedback path; however, I found that added too much of a time delay, which reduces the stability margins in the system.  From the ramp-response, I found that at a maximum, the yaw rate was approximately equal to the motor speed, so I approximated the plant as equal to 1.  Note that this is a very rough approximation and should be changed if the robot is on a surface with a different friction coefficient.  I made my set-point 200 deg/s because that was the lowest yaw rate that I could reliably rotate about.  </p>
+                                    <p class="text-justify">I used the Heuristic procedure #2 to tune the PID gains.  First, with KD and KI set to 0, I increased the KP value until oscillation, which was at KP = 1.2.  I noticed that there was always a non-zero steady-state error, which is expected for only proportional gain.  I then decreased the value by 2, KP = 0.6 and added a KI value with the goal of finding the stability-instability boundary.  I added anti-windup logic to the code, which stops integrating the error if the output saturates (setting the motors to less than 0 or greater than 255).   I noticed that as I increased KI from 1 to 5, the rise time decreased, and I did not notice much of an increase in overshoot.  However, as I increased KI over 5, the system began to become unstable.  I decided not to use proportional control because there was a lot of noise from the sensor, which might cause instability, and I thought the performance of the P-I controller worked sufficiently well.  Therefore, my final control constants are KP = 0.6, KI = 5, and KD = 0.  This gave an average yaw rate of 199.82 deg/s with a standard deviation of 5.77 deg/s for a set-point of 200 deg/s, which was my open-loop stable rotation speed.  At ½ my open-loop speed, I was able to achieve an average steady-state error of 3.8 deg/s with a standard deviation of 16.38 deg/s.  I noticed that it was much harder to maintain slow rotational speeds.  The slowest speed I was able to maintain is 50 deg/s.  The average steady state error was 2.76 deg/s with a standard deviation of 11.23 deg/s.  </p>
+                                    <p class="text-justify">From the calculations in the “TOF Sensor Accuracy,” we found that any speed at less than 200 deg/s should produce reliable rotational scans of the system.  However, spinning at 200 deg/s might produce more reliable scans than 50 deg/s because I witnessed the robot spin about its axis better at this speed, while at 50 deg/s, the robot also translated, which is hard to measure and compensate for while creating scans.</p>
+                                    <p class="text-justify">Below are some plots from various control constants of the system:</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/pid_dualmotor_graphs.png" alt="" />
+                                    <p class="text-justify">Below is the function added for PID control of both motors:</p>
+                                    </p><pre><code><p class="text-left">motor_feedback(200 , yaw_rate_data, 0.6, 5, 0, 10);</p></code></pre>
+                                    </p><pre><code><p class="text-left">// PID control.  Apply reference signal after waiting 10 seconds for as long as defined by time_step.
+void motor_feedback(double set_point, double sensor, double Kp, double Ki, double Kd, double time_step){
+    double t = micros();
+    // waits 10 seconds before starting
+    if ((t - t0_motors >= 10*1e6) && (!motors_start)){
+        motors_start = true;
+        t_motors_start = micros();
+    }
+    // run PID control
+    else if((motors_start) && (t - t_motors_start &#60;= time_step*1e6)){
+        // compute error
+        double t_PID = micros();
+        double error = set_point - sensor;
+        double error_filt = lowPass("yaw_rate_gyro", sensor, 0.1, 0.16);
+        double integrate_error = integrate_error0 + error*(t_PID - t0_PID)*1e-6;
+        diff_error = (error_filt - error0)/((t_PID - t0_PID)*1e-6);
+        // sum controller as the sum of the P, I, D terms
+        double controller = Kp*error + Ki*integrate_error + Kd*diff_error;
+        // multiply the controller by the plant
+        double plant = 1;
+        double output = controller * plant;
+        // implement anti-windup
+        if (output &#60; 0){
+            motor_speed = 0;
+            integrate_error = 0;
+        }
+        else if (output > 255){
+            motor_speed = 255;
+            integrate_error = 0;
+        }
+        else{
+            motor_speed = round(output);
+        }
+        // set the motor speed
+        myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+        myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+        delay(5);
+        // update time, error, and set-point
+        Serial.print((t_PID - t0_PID)*1e-6);
+        Serial.println();
+        error0 = error;
+        integrate_error0 = integrate_error;
+        t0_PID = t_PID;
+        reference = set_point;
+    }
+    // otherwise set the motors to speed 0
+    else{
+        error0 = 0;
+        integrate_error0 = 0;
+        diff_error = 0;
+        motor_speed = 0;
+        reference = 0;
+        myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+        myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+    }
+}</p></code></pre>
+                                    <h6>PID Control Single Motor</h6>
+                                    <p class="text-justify">I then implemented single_motor_control(), which takes the same code and constants as the dual motor PID control, however, only sets the speed for one of  the motors.  This is set for either left or right motors (to spin counterclockwise about the z-axis) and sets the other motor to speed 50 to unlock it.  With this method, we can potentially control our yaw rate to a lower value with more stability because the single motor runs at a higher speed (in the linear range of the motor) to achieve the same yaw rate as the dual motor.  At the slowest speed for the dual motor, 50 deg/s, with using the left motor, the average steady-state error was 1.98 deg/s and the standard deviation was 9.82 deg/s, a decrease of 28% and 13%, respectively.  For the right motor, the average steady state error was 2.09 deg/s and the standard deviation was 11.10 deg/s, and improvement of 24% and 1%, respectively.  The slowest speed I was able to reliably maintain was 30 deg/s, which maintained an average error of 2.79 (std. dev 8.22) for the left motor, and 40 deg/s for the right motor, which maintained an average error of 2.61 deg/s (std. Dev 10.47).  </p>
+                                    <p class="text-justify">Given the new slowest speed, 30 deg/s, for the same scenario as in the “ToF Sensor Accuracy” section, the robot would shift in orientation by 0.0686 degrees between ranging sensor measurements.  If the  robot starts at 5 meters  and 0 degrees with respect to an obstacle, the sensor reading would be 0.5000004 m, and at 45 degrees will be 0.5006 m.  This gives a standard deviation of 2.53E-7 m and 4.24E-4 m, which is almost negligible.  The distance measurements are more likely to be affected by sensor noise than the robot’s movements in this case.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/pid_singlemotor_graphs.png" alt="" />
+                                    </p><pre><code><p class="text-left">single_motor_feedback("left", 30, yaw_rate_data, 0.6,  5, 0, 10);</p></code></pre>
+                                    </p><pre><code><p class="text-left">// PID control for single motor, specified by motor.  Apply reference signal after waiting 10 seconds for as long as defined by time_step.
+void single_motor_feedback(String motor, double set_point, double sensor, double Kp, double Ki, double Kd, double time_step){
+    double t = micros();
+    // waits 10 seconds before starting
+    if ((t - t0_motors >= 10*1e6) && (!motors_start)){
+        motors_start = true;
+        t_motors_start = micros();
+    }
+    // run PID control
+    else if((motors_start) && (t - t_motors_start &#60;= time_step*1e6)){
+        // compute error
+        double t_PID = micros();
+        double error = set_point - sensor;
+        double error_filt = lowPass("yaw_rate_gyro", sensor, 0.1, 0.16);
+        double integrate_error = integrate_error0 + error*(t_PID - t0_PID)*1e-6;
+        diff_error = (error_filt - error0)/((t_PID - t0_PID)*1e-6);
+        // sum controller as the sum of the P, I, D terms
+        double controller = Kp*error + Ki*integrate_error + Kd*diff_error;
+        // multiply the controller by the plant
+        double plant = 1;
+        double output = controller * plant;
+        // implement anti-windup
+        if (output &#60; 0){
+            motor_speed = 0;
+            integrate_error = 0;
+        }
+        else if (output > 255){
+            motor_speed = 255;
+            integrate_error = 0;
+        }
+        else{
+            motor_speed = round(output);
+        }
+        // set the motor speed
+        if (motor == "left"){
+            myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+            myMotorDriver.setDrive( RIGHT_MOTOR, FWD, 50);
+        }
+        else if (motor == "right"){
+            myMotorDriver.setDrive( LEFT_MOTOR, REV, 50);
+            myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+        }
+        else{
+            Serial.print("incorrect motor specifed");
+        }
+        delay(5);
+        // update time, error, and set-point
+        Serial.print((t_PID - t0_PID)*1e-6);
+        Serial.println();
+        error0 = error;
+        integrate_error0 = integrate_error;
+        t0_PID = t_PID;
+        reference = set_point;
+    }
+    // otherwise set the motors to speed 0
+    else{
+        error0 = 0;
+        integrate_error0 = 0;
+        diff_error = 0;
+        motor_speed = 0;
+        reference = 0;
+        myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+        myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+    }
+}</p></code></pre>
                                     <p class="text-justify"></p>
                                     </p><pre><code><p class="text-left"></p></code></pre>
                                     <button class="btn btn-primary" data-dismiss="modal">
