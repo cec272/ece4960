@@ -1848,15 +1848,13 @@ def update_step(obs):
                                         <div class="divider-custom-line"></div>
                                     </div>
                                     <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/submarine.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab8/robot_sim.png" alt="" />
                                     <!-- Portfolio Modal - Text-->
                                     <p class="text-justify">For this lab, I implemented the pseudocode written for Lab 7.  A few modifications I made were normalizing the robot’s angles to [-180, 180), correcting the probability step in the odom_motion_model, looping through the previous belief state in the prediction step, and correcting the joint probability of multiple distance measurements.  I then spent time removing local variables to make the script use as little memory as possible and improve runtime.  I noticed that using as few variables as possible cut the computation time for each time step from about 5 minutes to tens of seconds.  </p>
                                     <p class="text-justify">First, I wrote compute_control().  This function determines the control information using the odometry motion model, taking as inputs two consecutive poses and returns rotation 1, translation, and rotation 2. </p>
-                                    </p><pre><code><p class="text-left"># In the docstring, "Pose" refers to a tuple (x,y,yaw) in (meters, meters, degrees)
-# In world coordinates
-def compute_control(cur_pose, prev_pose):
+                                    </p><pre><code><p class="text-left">def compute_control(cur_pose, prev_pose):
     """ Given the current and previous odometry poses, this function extracts
-    the control information based on the odometry motion model.
+    the control information based on the odometry motion model. In world coordinates.
 
     Args:
         cur_pose  ([Pose]): Current Pose
@@ -1892,9 +1890,8 @@ def compute_control(cur_pose, prev_pose):
     
     return delta_rot_1, delta_trans, delta_rot_2</p></code></pre>
                                     <p class="text-justify">Next, I wrote odom_motion_model(), which returns the probability of the current pose, given the prior pose and current control output.  First, I computed the control output given the two input poses using compute_controll().  Then, the probability is calculated using the gaussian distribution of the odometry model, with the control input as the mean and knowledge of our system as sigma.  </p>
-                                    </p><pre><code><p class="text-left"># In world coordinates
-def odom_motion_model(cur_pose, prev_pose, u):
-    """ Odometry Motion Model
+                                    </p><pre><code><p class="text-left">def odom_motion_model(cur_pose, prev_pose, u):
+    """ Odometry Motion Model, in world coordinates
 
     Args:
         cur_pose  ([Pose]): Current Pose
@@ -1938,107 +1935,108 @@ def odom_motion_model(cur_pose, prev_pose, u):
     return prob</p></code></pre>
                                     <p class="text-justify">The prediction step returns our guess, belief_bar, for the state of the robot= using the odometry motion model in the form of probabilities for each of the cells in the map.  For each of the prior states in the space [20X20X18], we check the probability that it could have moved to a new state in the map [20X20X18], given the odom_motion_model and prior belief.  Belief_bar is the sum of the prior belief_bar plus the probability from odom_motion_model multiplied by the prior belief.  This function uses the most amount of for loops (6) and therefore takes the most amount of computation time.  </p>
                                     </p><pre><code><p class="text-left">def prediction_step(cur_odom, prev_odom):
-""" Prediction step of the Bayes Filter.
-Update the probabilities in loc.bel_bar based on loc.bel from the previous time step and the odometry motion model.
+    """ Prediction step of the Bayes Filter.
+    Update the probabilities in loc.bel_bar based on loc.bel from the previous time step and the odometry motion model.
 
-Args:
-    cur_odom  ([Pose]): Current Pose
-    prev_odom ([Pose]): Previous Pose
-"""
+    Args:
+        cur_odom  ([Pose]): Current Pose
+        prev_odom ([Pose]): Previous Pose
+    """
 
-""" # readable format
-# get bel(x_(t-1))
-bel_prev = loc.bel
+    """ # readable format
+    # get bel(x_(t-1))
+    bel_prev = loc.bel
 
-# 3-d list to store bel_bar
-bel_bar = np.zeros((loc.mapper.MAX_CELLS_X, loc.mapper.MAX_CELLS_Y, loc.mapper.MAX_CELLS_A))
+    # 3-d list to store bel_bar
+    bel_bar = np.zeros((loc.mapper.MAX_CELLS_X, loc.mapper.MAX_CELLS_Y, loc.mapper.MAX_CELLS_A))
 
-# compute u
-u = compute_control(cur_odom, prev_odom)
+    # compute u
+    u = compute_control(cur_odom, prev_odom)
 
-# loop through every possible previous state
-for i0 in range(0, loc.mapper.MAX_CELLS_X):
-    for j0 in range(0, loc.mapper.MAX_CELLS_Y):
-        for k0 in range(0, loc.mapper.MAX_CELLS_A):
-            # loop through every possible current state
-            # only run if the prev belief is nonzero
-            if (bel_prev[i0, j0, k0] >= 0.0001):
-                for i in range(0, loc.mapper.MAX_CELLS_X):
-                    for j in range(0, loc.mapper.MAX_CELLS_Y):
-                        for k in range (0, loc.mapper.MAX_CELLS_A):
-                            # find x_t (center coordinate of cell in world coords)
-                            x_0 = loc.mapper.from_map(i0, j0, k0)
-                            x_t = loc.mapper.from_map(i, j, k) 
-                            
-                            # perform bel_bar estimate
-                            bel_bar[i][j][k] = bel_bar[i][j][k] + odom_motion_model(x_t, x_0, u)*bel_prev[i0][j0][k0]
-                
-# update bel_bar
-loc.bel_bar = bel_bar
-"""
-# faster format
-# compute u
-u = compute_control(cur_odom, prev_odom)
+    # loop through every possible previous state
+    for i0 in range(0, loc.mapper.MAX_CELLS_X):
+        for j0 in range(0, loc.mapper.MAX_CELLS_Y):
+            for k0 in range(0, loc.mapper.MAX_CELLS_A):
+                # loop through every possible current state
+                # only run if the prev belief is nonzero
+                if (bel_prev[i0, j0, k0] >= 0.0001):
+                    for i in range(0, loc.mapper.MAX_CELLS_X):
+                        for j in range(0, loc.mapper.MAX_CELLS_Y):
+                            for k in range (0, loc.mapper.MAX_CELLS_A):
+                                # find x_t (center coordinate of cell in world coords)
+                                x_0 = loc.mapper.from_map(i0, j0, k0)
+                                x_t = loc.mapper.from_map(i, j, k) 
+                                
+                                # perform bel_bar estimate
+                                bel_bar[i][j][k] = bel_bar[i][j][k] + odom_motion_model(x_t, x_0, u)*bel_prev[i0][j0][k0]
+                    
+    # update bel_bar
+    loc.bel_bar = bel_bar
+    """
+    # faster format
+    # compute u
+    u = compute_control(cur_odom, prev_odom)
 
-# loop through every possible previous state
-for i0 in range(0, loc.mapper.MAX_CELLS_X):
-    for j0 in range(0, loc.mapper.MAX_CELLS_Y):
-        for k0 in range(0, loc.mapper.MAX_CELLS_A):
-            # loop through every possible current state
-            # only run if the prev belief is nonzero
-            if (loc.bel[i0, j0, k0] >= 0.0001):
-                for i in range(0, loc.mapper.MAX_CELLS_X):
-                    for j in range(0, loc.mapper.MAX_CELLS_Y):
-                        for k in range (0, loc.mapper.MAX_CELLS_A):                                
-                            # perform bel_bar estimate
-                            loc.bel_bar[i][j][k] = loc.bel_bar[i][j][k] + odom_motion_model(loc.mapper.from_map(i, j, k) , loc.mapper.from_map(i0, j0, k0), u)*loc.bel[i0][j0][k0]</p></code></pre>
+    # loop through every possible previous state
+    for i0 in range(0, loc.mapper.MAX_CELLS_X):
+        for j0 in range(0, loc.mapper.MAX_CELLS_Y):
+            for k0 in range(0, loc.mapper.MAX_CELLS_A):
+                # loop through every possible current state
+                # only run if the prev belief is nonzero
+                if (loc.bel[i0, j0, k0] >= 0.0001):
+                    for i in range(0, loc.mapper.MAX_CELLS_X):
+                        for j in range(0, loc.mapper.MAX_CELLS_Y):
+                            for k in range (0, loc.mapper.MAX_CELLS_A):                                
+                                # perform bel_bar estimate
+                                loc.bel_bar[i][j][k] = loc.bel_bar[i][j][k] + odom_motion_model(loc.mapper.from_map(i, j, k) , loc.mapper.from_map(i0, j0, k0), u)*loc.bel[i0][j0][k0]</p></code></pre>
                                     <p class="text-justify">Sensor_model() is used to define the probability of each sensor measurement, given the pose of the robot and sensor measurements.  This function uses ray-casting to compute what the distance measurements should be for each cell, given our map and wall information.  For each sensor measurement [18], we calculate the probability given the Gaussian distribution for the sensor, with the ray casting measurement as the mean and given sigma for the sensor.</p>
                                     </p><pre><code><p class="text-left">def sensor_model(obs, x_t):
-""" This is the equivalent of p(z|x).
+    """ This is the equivalent of p(z|x).
 
 
-Args:
-    obs ([ndarray]): A 1D array consisting of the measurements made in rotation loop
-    x_t ([Pose]): location in cell coords
+    Args:
+        obs ([ndarray]): A 1D array consisting of the measurements made in rotation loop
+        x_t ([Pose]): location in cell coords
 
-Returns:
-    [ndarray]: Returns a 1D array of size 18 (=loc.OBS_PER_CELL) with the likelihood of each individual measurements
-"""
+    Returns:
+        [ndarray]: Returns a 1D array of size 18 (=loc.OBS_PER_CELL) with the likelihood of each individual measurements
+    """
 
-""" # readable format
-# noise distribution model
-sensor_sigma = loc.sensor_sigma
+    """ # readable format
+    # noise distribution model
+    sensor_sigma = loc.sensor_sigma
 
-# initialize probability array
-prob_array = np.zeros((1, len(obs)))
+    # initialize probability array
+    prob_array = np.zeros((1, len(obs)))
 
-# get z_k using ray casting
-z_star = loc.mapper.get_views(x_t[0], x_t[1], x_t[2])
+    # get z_k using ray casting
+    z_star = loc.mapper.get_views(x_t[0], x_t[1], x_t[2])
 
-# loop through each individual measurement
-for k in range(0, len(obs)):
-    # compute the probability
-    prob_array[0][k] = loc.gaussian(obs[k], z_star[k], sensor_sigma)
-    
-return prob_array
-"""
+    # loop through each individual measurement
+    for k in range(0, len(obs)):
+        # compute the probability
+        prob_array[0][k] = loc.gaussian(obs[k], z_star[k], sensor_sigma)
+        
+    return prob_array
+    """
 
-# faster format
-# initialize probability array
-prob_array = np.zeros((1, len(obs)))
+    # faster format
+    # initialize probability array
+    prob_array = np.zeros((1, len(obs)))
 
-# get z_k using ray casting
-z_star = loc.mapper.get_views(x_t[0], x_t[1], x_t[2])
+    # get z_k using ray casting
+    z_star = loc.mapper.get_views(x_t[0], x_t[1], x_t[2])
 
-# loop through each individual measurement
-for k in range(0, len(obs)):
-    # compute the probability
-    prob_array[0][k] = loc.gaussian(obs[k], z_star[k], loc.sensor_sigma)
-    
-return prob_array</p></code></pre>
+    # loop through each individual measurement
+    for k in range(0, len(obs)):
+        # compute the probability
+        prob_array[0][k] = loc.gaussian(obs[k], z_star[k], loc.sensor_sigma)
+        
+    return prob_array</p></code></pre>
                                     <p class="text-justify">Finally, the update step combines our prediction, bel_bar with the sensor information, allowing us to fuse together our knowledge from the prior state estimate, odometry information, and distance sensor measurement to obtain a new state estimate.  The update step loops through each of the cells in the map [20X20X18] and finds the probability of the state (belief), given the probability from the sensor model and belief_bar.  Also, belief is normalized by dividing each unit by the sum of belief.</p>
-                                    <p class="text-justify">To return our estimate for the pose, we plot the state with the highest belief, which is plotted below, for 25 defined control inputs.</p>
+                                    <p class="text-justify">To return our estimate for the pose, we plot the state with the highest belief, which is plotted below, for 25 defined control inputs.  In the figure, yellow is our estimated pose, green is the true pose, and blue is the dead reckoning pose.</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab8/pose_estimate_map.png" alt="" />
+                                    <p class="text-justify">Data for each estimation step can be found <a href="https://docs.google.com/spreadsheets/d/1z7T_SOl45JYaOSOVDLw17YvX7qKW_RmBkcM5D-556gY/edit?usp=sharing">here</a>.</p>
                                     <p class="text-justify">Overall, the runtime for 25-time steps was 6 minutes, 37 seconds.  One thing that I noticed was that it took 5-time steps before the filter converged on a “visually correct” pose.  My guess is that in the first few steps, the point with the highest probability was plotted, even though it did not match the solution.  However, it was interesting to see how slowly, the pose estimate seemed to become better and better, with decreasing error.  The final position error was (0.035, 0.231, 2.329).  The largest error occurred in the angle measurement, as we were limited to 20 degrees of resolution.  The Recursive Bayes Filter was much better than the odometry estimate of the pose was not even on the map.  The accuracy is also limited by the grid size that we used, as a finer mesh size would more accurate, at the expense of an exponential increase in processing time.  </p>
                                     <p class="text-justify">Below is a video of the Recursive Bayes Filter through the 25-time steps in the simulated environment:</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/1y7GExAl11I" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

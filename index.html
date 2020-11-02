@@ -1848,7 +1848,7 @@ def update_step(obs):
                                         <div class="divider-custom-line"></div>
                                     </div>
                                     <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/submarine.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab8/robot_sim.png" alt="" />
                                     <!-- Portfolio Modal - Text-->
                                     <p class="text-justify">For this lab, I implemented the pseudocode written for Lab 7.  A few modifications I made were normalizing the robot’s angles to [-180, 180), correcting the probability step in the odom_motion_model, looping through the previous belief state in the prediction step, and correcting the joint probability of multiple distance measurements.  I then spent time removing local variables to make the script use as little memory as possible and improve runtime.  I noticed that using as few variables as possible cut the computation time for each time step from about 5 minutes to tens of seconds.  </p>
                                     <p class="text-justify">First, I wrote compute_control().  This function determines the control information using the odometry motion model, taking as inputs two consecutive poses and returns rotation 1, translation, and rotation 2. </p>
@@ -2034,11 +2034,51 @@ def update_step(obs):
         
     return prob_array</p></code></pre>
                                     <p class="text-justify">Finally, the update step combines our prediction, bel_bar with the sensor information, allowing us to fuse together our knowledge from the prior state estimate, odometry information, and distance sensor measurement to obtain a new state estimate.  The update step loops through each of the cells in the map [20X20X18] and finds the probability of the state (belief), given the probability from the sensor model and belief_bar.  Also, belief is normalized by dividing each unit by the sum of belief.</p>
+                                    </p><pre><code><p class="text-left">def update_step():
+    """ Update step of the Bayes Filter.
+    Update the probabilities in loc.bel based on loc.bel_bar and the sensor model.
+    """
+
+    """ # readable fdrmat
+    # get bel_bar
+    bel_bar = loc.bel_bar
+
+    # 3-d list to store bel
+    bel = np.zeros((loc.mapper.MAX_CELLS_X, loc.mapper.MAX_CELLS_Y, loc.mapper.MAX_CELLS_A))
+
+    # compute bel_bar for every possible location
+    for i in range(0, loc.mapper.MAX_CELLS_X):
+        for j in range(0, loc.mapper.MAX_CELLS_Y):
+            for k in range (0, loc.mapper.MAX_CELLS_A):
+                # only run if bel_bar is nonzero
+                if (bel_bar[i, j, k] >= 0.0001):
+                    # calculate the sensor probability
+                    prob_sensor = sensor_model(loc.obs_range_data, [i, j, k])
+
+                    # perform the update and normalize bel_bar
+                    bel[i][j][k] = np.prod(prob_sensor)*bel_bar[i][j][k]
+                    bel = bel/np.sum(bel_bar)
+
+    # update bel_bar
+    loc.bel = bel_bar
+    """
+
+    # compute bel_bar for every possible location
+    for i in range(0, loc.mapper.MAX_CELLS_X):
+        for j in range(0, loc.mapper.MAX_CELLS_Y):
+            for k in range (0, loc.mapper.MAX_CELLS_A):
+                # only run if bel_bar is nonzero
+                if (loc.bel_bar[i][j][k] >= 0.0001):
+                    # perform the update and normalize bel_bar
+                    loc.bel[i][j][k] = np.prod(sensor_model(loc.obs_range_data, [i, j, k]))*loc.bel_bar[i][j][k]
+                    loc.bel = loc.bel/np.sum(loc.bel)</p></code></pre>
                                     <p class="text-justify">To return our estimate for the pose, we plot the state with the highest belief, which is plotted below, for 25 defined control inputs.  In the figure, yellow is our estimated pose, green is the true pose, and blue is the dead reckoning pose.</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab8/pose_estimate_map.png" alt="" />
+                                    <p class="text-justify">Data for each estimation step can be found <a href="https://docs.google.com/spreadsheets/d/1z7T_SOl45JYaOSOVDLw17YvX7qKW_RmBkcM5D-556gY/edit?usp=sharing">here</a>.</p>
                                     <p class="text-justify">Overall, the runtime for 25-time steps was 6 minutes, 37 seconds.  One thing that I noticed was that it took 5-time steps before the filter converged on a “visually correct” pose.  My guess is that in the first few steps, the point with the highest probability was plotted, even though it did not match the solution.  However, it was interesting to see how slowly, the pose estimate seemed to become better and better, with decreasing error.  The final position error was (0.035, 0.231, 2.329).  The largest error occurred in the angle measurement, as we were limited to 20 degrees of resolution.  The Recursive Bayes Filter was much better than the odometry estimate of the pose was not even on the map.  The accuracy is also limited by the grid size that we used, as a finer mesh size would more accurate, at the expense of an exponential increase in processing time.  </p>
                                     <p class="text-justify">Below is a video of the Recursive Bayes Filter through the 25-time steps in the simulated environment:</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/1y7GExAl11I" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify"></p>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
