@@ -1836,7 +1836,7 @@ void set_reference_rotate(double degrees_rotation, double angular_set_point, dou
     }
     if (t - t0_rotate >= time_start*1e6){ // current time > time_start
         motors_start = true;
-        if ((degrees_rotation + yaw_angle_start) >= abs(yaw_angle)){ // current yaw angle < degrees_rotation
+        if ((degrees_rotation + yaw_angle_start) >= abs(yaw_angle)){ // current yaw angle &#60; degrees_rotation
             reference = angular_set_point;
         }
         else{ // current yaw angle > degrees_rotation
@@ -1845,7 +1845,7 @@ void set_reference_rotate(double degrees_rotation, double angular_set_point, dou
     }
 }</p></code></pre>
                                     <p class="text-justify">Below is the raw output from two rotations at a yaw rate of 50 degrees/second, transformed to cartesian coordinates.  We can see that the output resembles the room, but without any coordinate transformations, the coordinate system is the sensor’s reference frame.  Also, we cannot see around objects, such as the island, as the scan only reads from the field of view of the sensor.  To get an accurate reading, we need to combine multiple scans from different locations in the room.</p>
-                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/map_raw.jpg" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/map_raw.png" alt="" />
                                     <h6>Coordinate Transformation</h6>
                                     <p class="text-justify">There are two coordinate transformations to compute a map in world coordinates.  First, the ToF measurement needs to be transformed into the robot coordinates, whose origin is at the geometric center of the robot (where we would like the robot to turn about).  This takes into account the location of the sensor, which is mounted on 3-D printed mounts.  Then the robot coordinates need to be transformed to the world coordinates, which takes into account the x, y, and theta measurement (pose) of the robot. </p>
                                     <p class="text-justify">Below is the coordinate transformation matrix I calculated:</p>
@@ -1884,7 +1884,7 @@ axis equal</p></code></pre>
                                     <p class="text-justify">Below is the drawn map, with the 4 scan locations.</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/bathroom_scan_loc.jpg" alt="" />
                                     <p class="text-justify">Below is the map plotted using this method in MATLAB.  We can see that it roughly resembles the room; however, there are some false and missing measurements.  Placing the robot in multiple locations allowed us to scan and plot around obstacles and room features, including the toilet and plant.</p>
-                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/multi_map.jpg" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/multi_map.png" alt="" />
                                     </p><pre><code><p class="text-left"></p></code></pre>
                                     <h6></h6>
                                     <p class="text-justify"></p>
