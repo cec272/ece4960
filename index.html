@@ -1816,6 +1816,77 @@ def update_step(obs):
     
     # update bel_bar
     loc.bel = bel_bar</p></code></pre>
+                                    <h5>Mapping with the Robot</h5>
+                                    <h6>Preparing the Room</h6>
+                                    <p class="text-justify">First, I prepared the room to generate.  I had to choose my bathroom, as it was the best room in my apartment for this purpose, as it has a hard tile floor, is static with little movable furniture, and has a few irregularities, such as the toilet.  I also added a plant in the middle of the room to create an “island”.</p>
+                                    <p class="text-justify">Below is a photo of the room to be mapped.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/bathroom_photo.jpg" alt="" />
+                                    <p class="text-justify">Below is a map that I drew from taking measurements with a tape measure.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/bathroom_drawn_map.jpg" alt="" />
+                                    <h6>Sanity Check</h6>
+                                    <p class="text-justify">I then added the following code to the robot.  In each loop, the robot takes a scan from the ToF sensor.  I modified the PID controller from Lab 6 to take into input a set-point.  The set-point is created by the function set_reference_rotate(), which creates a reference signal from 0 to the desired yaw rate and back to 0 after the robot has rotated a defined number of degrees. From the data collected in Lab 6, I had the robot move at 50 degrees/second for 720 degrees.  This is a fairly reliable turning speed for the robot, and it performs 2 rotations.  I could rotate the robot more, which would give more ToF returns and build a higher resolution map, but the robot does not spin perfectly about its axis.  Since we cannot estimate and account for the translation while spinning, this creates inaccuracies in the measurements.  Additionally, errors come from incorrect yaw estimation (due to noise and drift via z-axis gyro rate integration) and noise from the ToF sensor.  </p>
+                                    </p><pre><code><p class="text-left">set_reference_rotate(720, 50, yaw_angle_data, 15);
+motor_feedback_2(reference, yaw_rate_data, 0.6, 5, 0);</p></code></pre>
+                                    </p><pre><code><p class="text-left">// sets the reference signal to the angular_set_point at time_start until the robot has rotated specified angle
+void set_reference_rotate(double degrees_rotation, double angular_set_point, double yaw_angle, double time_start){
+    double t = micros();
+    if (!motors_start){ // current time &#60; time_start
+        yaw_angle_start = yaw_angle;
+        reference = 0;
+    }
+    if (t - t0_rotate >= time_start*1e6){ // current time > time_start
+        motors_start = true;
+        if ((degrees_rotation + yaw_angle_start) >= abs(yaw_angle)){ // current yaw angle < degrees_rotation
+            reference = angular_set_point;
+        }
+        else{ // current yaw angle > degrees_rotation
+            reference = 0;
+        }
+    }
+}</p></code></pre>
+                                    <p class="text-justify">Below is the raw output from two rotations at a yaw rate of 50 degrees/second, transformed to cartesian coordinates.  We can see that the output resembles the room, but without any coordinate transformations, the coordinate system is the sensor’s reference frame.  Also, we cannot see around objects, such as the island, as the scan only reads from the field of view of the sensor.  To get an accurate reading, we need to combine multiple scans from different locations in the room.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/map_raw.jpg" alt="" />
+                                    <h6>Coordinate Transformation</h6>
+                                    <p class="text-justify">There are two coordinate transformations to compute a map in world coordinates.  First, the ToF measurement needs to be transformed into the robot coordinates, whose origin is at the geometric center of the robot (where we would like the robot to turn about).  This takes into account the location of the sensor, which is mounted on 3-D printed mounts.  Then the robot coordinates need to be transformed to the world coordinates, which takes into account the x, y, and theta measurement (pose) of the robot. </p>
+                                    <p class="text-justify">Below is the coordinate transformation matrix I calculated:</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/coord_transform.jpg" alt="" />
+                                    <p class="text-justify">I implemented this transformation in my MATLAB code used for plotting:</p>\
+                                    </p><pre><code><p class="text-left">d_x_w = 0; % inches
+d_y_w = 0; % inches
+theta_w_start = 0; % radians
+z_x_w = [];
+z_y_w = [];
+for i=1:length(distance_resp)
+    theta_w = theta_w_start + abs(yaw_resp(i)-yaw_start_resp(i)).*pi./180;
+    z_x_s = distance_resp(i)*0.0393701;
+    robot2global = [cos(theta_w), -sin(theta_w), 0, d_x_w;...
+                    sin(theta_w), cos(theta_w), 0, d_y_w;...
+                    0, 0, 1, 0;...
+                    0, 0, 0, 0];
+    tof2robot = [1, 0, 0, 2.755;...
+                0, 1, 0, -.836;...
+                0, 0, 1, 1;...
+                0, 0, 0, 1];
+    tof_meas = [z_x_s; 0; 0; 1];
+    world_meas = robot2global*tof2robot*tof_meas;
+    z_x_w = [z_x_w, world_meas(1)];
+    z_y_w = [z_y_w, world_meas(2)];
+end
+
+figure(2)
+plot(z_x_w, z_y_w,'o')
+xlabel('x (in)')
+ylabel('y (in)')
+title('Map using ToF Sensor')
+axis equal</p></code></pre>
+                                    <h6>Building Map</h6>
+                                    <p class="text-justify">To build a map, I placed the robot in 4 locations with known poses.  This allowed the robot to take scans for the entire room, including sections that are not within a singular scan’s field of view.  Then I combined the outputs after performing the coordinate transformations for each scan.</p>
+                                    <p class="text-justify">Below is the drawn map, with the 4 scan locations.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/bathroom_scan_loc.jpg" alt="" />
+                                    <p class="text-justify">Below is the map plotted using this method in MATLAB.  We can see that it roughly resembles the room; however, there are some false and missing measurements.  Placing the robot in multiple locations allowed us to scan and plot around obstacles and room features, including the toilet and plant.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/multi_map.jpg" alt="" />
+                                    </p><pre><code><p class="text-left"></p></code></pre>
+                                    <h6></h6>
                                     <p class="text-justify"></p>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
@@ -2068,7 +2139,8 @@ def update_step(obs):
     # update bel_bar
     loc.bel = bel_bar
     """
-
+    
+    # faster format
     # compute bel_bar for every possible location
     for i in range(0, loc.mapper.MAX_CELLS_X):
         for j in range(0, loc.mapper.MAX_CELLS_Y):

@@ -38,6 +38,7 @@ double error0 = 0;
 double integrate_error0 = 0;
 double diff_error = 0;
 double t0_PID = micros();
+double t0_step = micros();
 double reference = 0;
 
 // IMU variables to keep track of
@@ -51,10 +52,15 @@ double pitchCompFilt0 = 0;
 double yawRateGyro0 = 0;
 double yaw_rate_data = 0;
 double yaw_rate_data_filt = 0;
+double yaw_angle_data = 0;
+double yaw_angle_start = 0;
 double t0_pitch = micros();
 double t0_roll = micros();
 double t0_yaw = micros();
 double t0_compFilt = micros();
+
+// ToF variables to keep track of
+double distance = 0;
 
 // Motor variables to keep track of
 #define LEFT_MOTOR 1
@@ -67,6 +73,7 @@ int motor_speed = 0;
 boolean ramp_up = true;
 double t0_motors = micros();
 double t_motors_start = micros();
+double t0_rotate = micros();
 boolean motors_start = false;
 
 // Bluetooth vairables to keep track of
@@ -192,29 +199,40 @@ void loop() {
   if( myICM.dataReady() ){
     // Update IMU values
     myICM.getAGMT();
-    // Get Yaw angle
+    // Get yaw rate
     yaw_rate_data = getFormattedFloat( myICM.gyrZ(), 5, 2).toDouble();
     yaw_rate_data_filt = lowPass("yaw_rate_gyro", yaw_rate_data, 0.1, 0.16);
-    Serial.print(yaw_rate_data);
+    // Get yaw angle
+    yaw_angle_data = getYawGyro();
   }
   else{
     Serial.println("Waiting for data");
     delay(500);
   }
+  // ToF
+  distanceSensor.startRanging(); //Write configuration bytes to initiate measurement
+  distance = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
+  distanceSensor.clearInterrupt();
+  distanceSensor.stopRanging();
+  byte rangeStatus = distanceSensor.getRangeStatus();
 
   /// *** Perform Control Action *** ///
   //rampMotors();
   //stepMotors(220, 10);
   //motor_feedback(200 , yaw_rate_data, 0.6, 5, 0, 10);
-  single_motor_feedback("left", 30, yaw_rate_data, 0.6,  5, 0, 10);
+  //single_motor_feedback("left", 30, yaw_rate_data, 0.6,  5, 0, 10);
+  //set_reference_step(200, 10, 20);
+  set_reference_rotate(720, 50, yaw_angle_data, 15);
+  motor_feedback_2(reference, yaw_rate_data, 0.6, 5, 0);
+  
+  /// *** Print Stuff in Serial for Debugging *** ///
+  Serial.print(yaw_rate_data);
+  Serial.print(",");
+  Serial.print(yaw_angle_data);
   Serial.print(",");
   Serial.print(motor_speed);
   Serial.print(",");
-  Serial.print(error0);
-  Serial.print(",");
-  Serial.print(integrate_error0);
-  Serial.print(",");
-  Serial.print(diff_error);
+  Serial.print(reference);
   Serial.println();
 
   /// *** Send Data Back Over Bluetooth *** ///
@@ -286,28 +304,114 @@ void loop() {
     if (bytestream_active)
     {
         res_cmd->command_type = BYTESTREAM_TX;
-        res_cmd->length = 36;
-        int motor_data = motor_speed;
-        double yaw_data = yaw_rate_data;
+        res_cmd->length = 52;
         double t1 = micros()*1e-6;
+        int motor_data = motor_speed;
+        double yaw_rate = yaw_rate_data;
+        double yaw_data = yaw_angle_data;
+        double yaw_start = yaw_angle_start;
         double ref_sig = reference;
-        double control_error = error0;
+        double distance_data = distance;
         memcpy(res_cmd->data,&t1,8);
         memcpy(res_cmd->data+8,&motor_data,4);
-        memcpy(res_cmd->data+12,&yaw_data,8);
-        memcpy(res_cmd->data+20,&ref_sig,8);
-        memcpy(res_cmd->data+28, &control_error,8);
-        amdtpsSendData((uint8_t *)res_cmd, 38);
+        memcpy(res_cmd->data+12,&yaw_rate,8);
+        memcpy(res_cmd->data+20,&yaw_data,8);
+        memcpy(res_cmd->data+28,&yaw_start,8);
+        memcpy(res_cmd->data+36,&ref_sig,8);
+        memcpy(res_cmd->data+44, &distance_data,8);
+        amdtpsSendData((uint8_t *)res_cmd, 54);
         // Log time
         long t = micros();
         Serial.printf("Package: %3d, Time: %3d\n",package,t);
         package++;
     }
     trigger_timers();
-    delay(10);
+    delay(5);
 }
 
 /// *** Helper Functions for PID control *** ///
+// sets the reference signal to the angular_set_point at time_start until the robot has rotated specified angle
+void set_reference_rotate(double degrees_rotation, double angular_set_point, double yaw_angle, double time_start){
+  double t = micros();
+  if (!motors_start){ // current time < time_start
+    yaw_angle_start = yaw_angle;
+    reference = 0;
+  }
+  if (t - t0_rotate >= time_start*1e6){ // current time > time_start
+    motors_start = true;
+    if ((degrees_rotation + yaw_angle_start) >= abs(yaw_angle)){ // current yaw angle < degrees_rotation
+      reference = angular_set_point;
+    }
+    else{ // current yaw angle > degrees_rotation
+      reference = 0;
+    }
+  }
+}
+
+// creates a square wave from 0 to the set_point at time_start, back to 0 at time_end
+void set_reference_step(double set_point, double time_start, double time_end){
+  double t = micros();
+  if ((t - t0_step >= time_start*1e6) && (t - t0_step <= time_end*1e6)){
+    reference = set_point;
+  }
+  else{
+    reference = 0;
+  }
+}
+
+// PID control for dual motors, always following the set_point
+void motor_feedback_2(double set_point, double sensor, double Kp, double Ki, double Kd){
+  // local variables
+  String motor_direction = "";
+  double t_PID = micros();
+  double tolerance = 20;
+  // compute error
+  double error = set_point - sensor;
+  double error_filt = lowPass("yaw_rate_gyro", sensor, 0.1, 0.16);
+  double integrate_error = integrate_error0 + error*(t_PID - t0_PID)*1e-6;
+  diff_error = (error_filt - error0)/((t_PID - t0_PID)*1e-6);
+  // sum controller as the sum of the P, I, D terms
+  double controller = Kp*error + Ki*integrate_error + Kd*diff_error;
+  // multiply the controller by the plant
+  double plant = 1;
+  double output = controller * plant;
+  // implement anti-windup
+  if (output > 255){
+    motor_direction = "left";
+    motor_speed = 255;
+    integrate_error = 0;
+  }
+  else if (output < -255){
+    motor_direction = "right";
+    motor_speed = 255;
+    integrate_error = 0;
+  }
+  else if (output >= 0 - tolerance){
+    motor_direction = "left";
+    motor_speed = round(output);
+  }
+  else if (output < 0 - tolerance){
+    motor_direction = "right";
+    motor_speed = round(abs(output));
+  }
+  // set the motor speed
+  if (motor_direction == "left"){
+    myMotorDriver.setDrive( LEFT_MOTOR, REV, motor_speed);
+    myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
+    delay(5);
+  }
+  else if (motor_direction == "right"){
+    myMotorDriver.setDrive( LEFT_MOTOR, FWD, motor_speed);
+    myMotorDriver.setDrive( RIGHT_MOTOR, REV, motor_speed);
+    delay(5);
+  }
+  // update time, error, and set-point
+  error0 = error;
+  integrate_error0 = integrate_error;
+  t0_PID = t_PID;
+  reference = set_point;
+}
+
 // PID control for dual motors.  Apply reference signal after waiting 10 seconds for as long as defined by time_step.
 void motor_feedback(double set_point, double sensor, double Kp, double Ki, double Kd, double time_step){
   double t = micros();
