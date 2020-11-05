@@ -1824,7 +1824,7 @@ def update_step(obs):
                                     <p class="text-justify">Below is a map that I drew from taking measurements with a tape measure.</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/bathroom_drawn_map.jpg" alt="" />
                                     <h6>Sanity Check</h6>
-                                    <p class="text-justify">I then added the following code to the robot.  In each loop, the robot takes a scan from the ToF sensor.  I modified the PID controller from Lab 6 to take into input a set-point.  The set-point is created by the function set_reference_rotate(), which creates a reference signal from 0 to the desired yaw rate and back to 0 after the robot has rotated a defined number of degrees. From the data collected in Lab 6, I had the robot move at 50 degrees/second for 720 degrees.  This is a fairly reliable turning speed for the robot, and it performs 2 rotations.  I could rotate the robot more, which would give more ToF returns and build a higher resolution map, but the robot does not spin perfectly about its axis.  Since we cannot estimate and account for the translation while spinning, this creates inaccuracies in the measurements.  Additionally, errors come from incorrect yaw estimation (due to noise and drift via z-axis gyro rate integration) and noise from the ToF sensor.  </p>
+                                    <p class="text-justify">I then added the following code to the robot.  In each loop, the robot takes a scan from the ToF sensor.  I modified the PID controller from Lab 6 to take into input a set-point.  The set-point is created by the function set_reference_rotate(), which creates a reference signal from 0 to the desired yaw rate and back to 0 after the robot has rotated a defined number of degrees. From the data collected in Lab 6, I had the robot move at 50 degrees/second for 720 degrees.  This is a fairly reliable turning speed for the robot, and it performs 2 rotations.  I could rotate the robot more, which would give more ToF returns and build a higher resolution map, but the robot does not spin perfectly about its axis.  Since we cannot estimate and account for the translation while spinning, this creates inaccuracies in the measurements.  Additionally, errors come from incorrect yaw estimation (due to noise and drift via z-axis gyro rate integration) and noise from the ToF sensor.  We can see that there are rotation differences between the two complete scans, false short distance measurements, and false long distance measurements.  </p>
                                     </p><pre><code><p class="text-left">set_reference_rotate(720, 50, yaw_angle_data, 15);
 motor_feedback_2(reference, yaw_rate_data, 0.6, 5, 0);</p></code></pre>
                                     </p><pre><code><p class="text-left">// sets the reference signal to the angular_set_point at time_start until the robot has rotated specified angle
@@ -1850,7 +1850,7 @@ void set_reference_rotate(double degrees_rotation, double angular_set_point, dou
                                     <p class="text-justify">There are two coordinate transformations to compute a map in world coordinates.  First, the ToF measurement needs to be transformed into the robot coordinates, whose origin is at the geometric center of the robot (where we would like the robot to turn about).  This takes into account the location of the sensor, which is mounted on 3-D printed mounts.  Then the robot coordinates need to be transformed to the world coordinates, which takes into account the x, y, and theta measurement (pose) of the robot. </p>
                                     <p class="text-justify">Below is the coordinate transformation matrix I calculated:</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/coord_transform.jpg" alt="" />
-                                    <p class="text-justify">I implemented this transformation in my MATLAB code used for plotting:</p>\
+                                    <p class="text-justify">I implemented this transformation in my MATLAB code used for plotting:</p>
                                     </p><pre><code><p class="text-left">d_x_w = 0; % inches
 d_y_w = 0; % inches
 theta_w_start = 0; % radians
@@ -1885,9 +1885,48 @@ axis equal</p></code></pre>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/bathroom_scan_loc.jpg" alt="" />
                                     <p class="text-justify">Below is the map plotted using this method in MATLAB.  We can see that it roughly resembles the room; however, there are some false and missing measurements.  Placing the robot in multiple locations allowed us to scan and plot around obstacles and room features, including the toilet and plant.</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/multi_map.png" alt="" />
-                                    </p><pre><code><p class="text-left"></p></code></pre>
-                                    <h6></h6>
-                                    <p class="text-justify"></p>
+                                    <h6>Map Processing</h6>
+                                    <p class="text-justify">Using MATLAB’s ginput function, I created a GUI to record and plot a manual guess where the actual walls/obstacles are based on the scatter plot.  I also saved these as a pair of of start points and end points.  If I were to pair my readings down to a fixed number, i.e. 20 degree increments, I would use the reading that is closest to the 20 degree increment or linearly interpolate between the two readings closest to the increment and remove all the other readings.  I believe this method is better than averaging since the readings may change largely between angles if there is a discontinuity, i.e, going from one obstacle to another.  I created a MATLAB function to convert the startpoints into the python array format, which is then copied and pasted into the lab7b python script.</p>
+                                    <p class="text-justify">Below is my manual wall estimate overlaid on the scatter plot:</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/multi_map_converted.png" alt="" />                                    
+                                    <p class="text-justify">Below is my code used to create the start and end points:</p>
+                                    </p><pre><code><p class="text-left">% manually clean-up map
+prompt = {'Done with shapes? [Y/N]: '};
+dlgtitle = 'Text Input';
+definput = {'N'};
+dims = [1 40];
+opts.WindowStyle = 'normal';
+input_str = inputdlg(prompt,dlgtitle,dims,definput,opts);
+while (strcmp(input_str, 'N'))
+    coords_input = ginput;
+    ginput_coords{end+1} = coords_input;
+    if not(isempty(ginput_coords{end}))
+        ginput_coords{end} = [ginput_coords{end}; ginput_coords{end}(1,1), ginput_coords{end}(1,2)];
+        p_k = plot(ginput_coords{end}(:,1), ginput_coords{end}(:,2), '-','LineWidth',4);
+        p = [p, p_k];
+    end
+    prompt = {'Done with shapes? [Y/N]: '};
+    legend_text{end+1} = strcat('Obstacle ', num2str(prompt_count));
+    dlgtitle = 'Text Input';
+    definput = {'N'};
+    dims = [1 40];
+    opts.WindowStyle = 'normal';
+    input_str = inputdlg(prompt,dlgtitle,dims,definput,opts);
+    prompt_count = prompt_count + 1;
+end
+
+% clean-up walls for simulator format
+start_pts = [];
+end_pts = [];
+for k = 1:length(ginput_coords)
+    start_pts = [start_pts; [ginput_coords{k}(1:end-1, 1), ginput_coords{k}(1:end-1, 2)]];
+    end_pts = [end_pts; [ginput_coords{k}(2:end, 1), ginput_coords{k}(2:end, 2)]];
+end
+start_pts_array = array(start_pts.*0.0254) % convert to python format and in meters
+end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters</p></code></pre>
+                                    <h6>Visualize Map in the Plotter Tool</h6>
+                                    <p class="text-justify">After importing the start and endpoints to the Lab 7b Python script, I confirmed that the plotter displayed my map correctly.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/plotter_tool_map.png" alt="" />                                       
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
