@@ -1618,8 +1618,26 @@ void single_motor_feedback(String motor, double set_point, double sensor, double
         myMotorDriver.setDrive( RIGHT_MOTOR, FWD, motor_speed);
     }
 }</p></code></pre>
-                                    <p class="text-justify"></p>
-                                    </p><pre><code><p class="text-left"></p></code></pre>
+                                    <h5>Odometry and Ground Truth in the Virtual Robot</h5>
+                                    <p class="text-justify">The ground truth is called by the function get_gt_pose(), which we will use as true value to compare our pose estimation from the odometry.  After I added and plotted the odometry and true pose simultaneously, we can see how inaccurate the odometry pose is.  Below is a video of the odometry pose plotted against the ground truth pose, while driving the robot in the simulator manually.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/X17ufQXGtoA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify">Below, the odometry pose is plotted in red, and the ground truth pose is plotted in green.  I plotted every 0.1 seconds, which is a 10 Hz sampling rate and seems to be good enough to plot a smooth trajectory, without causing the plotter to crash.  We can see that when the robot is stationary, noise causes the odometry pose to ‘drift’ and move about, while the true pose shows the robot is stationary.  As the robot moves, integration errors caused by the odometry slip and noise cause the odometry pose to drift even more.  We can see that for a small point in time, the odometry displacement is approximately equal to the true pose displacement.  However, the pose is quite off (up to meters).  First, the odometry pose starts in a different location than the true pose, as it has no way of initializing correctly.  As the drift increases, the odometry pose begins to differ in shape and orientation.  The odometry pose error seems to increase with higher speeds and larger angular change.  </p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab6/odom_pose.png" alt="" />
+                                    <p class="text-justify">Below is the code that was added to the Jupyter notebook:</p>
+                                    </p><pre><code><p class="text-left">def update_plot(robot):
+    # Get the true pose
+    pose_gt = robot.get_gt_pose()
+    
+    # Estimate pose from odometry
+    pose_odom = robot.get_pose()
+    
+    # Plot true pose and odom pose
+    robot.send_to_plot(pose_gt[0], pose_gt[1], GT)
+    robot.send_to_plot(pose_odom[0], pose_odom[1], ODOM)
+
+while (True):
+    update_plot(robot)
+    time.sleep(0.1)</p></code></pre>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
@@ -1651,7 +1669,7 @@ void single_motor_feedback(String motor, double set_point, double sensor, double
                                         <div class="divider-custom-line"></div>
                                     </div>
                                     <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/submarine.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab7/multi_map_converted.png" alt="" />
                                     <!-- Portfolio Modal - Text-->
                                     <h5>Grid Localization Using Bayes Filter</h5>
                                     <p class="text-justify">I extracted and set-up the base code per the lab instructions.  I did have an issue with setting-up the code that was solved by deleting the folders found in the /home/artemis/catkin_ws folder.  I made sure to back-up my previous code.</p>
@@ -1886,7 +1904,7 @@ axis equal</p></code></pre>
                                     <p class="text-justify">Below is the map plotted using this method in MATLAB.  We can see that it roughly resembles the room; however, there are some false and missing measurements.  Placing the robot in multiple locations allowed us to scan and plot around obstacles and room features, including the toilet and plant.</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/multi_map.png" alt="" />
                                     <h6>Map Processing</h6>
-                                    <p class="text-justify">Using MATLAB’s ginput function, I created a GUI to record and plot a manual guess where the actual walls/obstacles are based on the scatter plot.  I also saved these as a pair of of start points and end points.  If I were to pair my readings down to a fixed number, i.e. 20 degree increments, I would use the reading that is closest to the 20 degree increment or linearly interpolate between the two readings closest to the increment and remove all the other readings.  I believe this method is better than averaging since the readings may change largely between angles if there is a discontinuity, i.e, going from one obstacle to another.  I created a MATLAB function to convert the startpoints into the python array format, which is then copied and pasted into the lab7b python script.</p>
+                                    <p class="text-justify">Using MATLAB’s ginput function, I created a GUI to record and plot a manual guess where the actual walls/obstacles are based on the scatter plot.  I simplified curved shapes with polygons for simplicity.  I also saved these as a pair of of start points and end points.  If I were to pair my readings down to a fixed number, i.e. 20 degree increments, I would use the reading that is closest to the 20 degree increment or linearly interpolate between the two readings closest to the increment and remove all the other readings.  I believe this method is better than averaging since the readings may change largely between angles if there is a discontinuity, i.e, going from one obstacle to another.  I created a MATLAB function to convert the startpoints into the python array format, which is then copied and pasted into the lab7b python script.</p>
                                     <p class="text-justify">Below is my manual wall estimate overlaid on the scatter plot:</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/multi_map_converted.png" alt="" />                                    
                                     <p class="text-justify">Below is my code used to create the start and end points:</p>
