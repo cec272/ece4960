@@ -149,7 +149,7 @@
                             <div class="portfolio-item-caption d-flex align-items-center justify-content-center h-100 w-100">
                                 <div class="portfolio-item-caption-content text-center text-white"><i class="fas fa-plus fa-3x"></i></div>
                             </div>
-                            <img class="img-fluid" src="assets/img/portfolio/cabin.png" alt="" />
+                            <img class="img-fluid" src="assets/img/portfolio/lab9.png" alt="" />
                             <h5 class="text-center">Lab 9: Localization (Robot)</h5>
                         </div>
                     </div>
@@ -2246,9 +2246,106 @@ end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters<
                                         <div class="divider-custom-line"></div>
                                     </div>
                                     <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/submarine.png" alt="" />
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab9/robot_in_world.jpg" alt="" />
                                     <!-- Portfolio Modal - Text-->
-                                    <p class="mb-5">To be completed</p>
+                                    <h5>World Setup</h5>
+                                    <p class="text-justify">I set-up the world to reflect the scan from Lab 7(b).  I added the coordinate outputs to the “Map Representation” module of lab9_real.ipynb.  I also added a bounding box around the whole map because I was getting an error while initializing and pre-caching the raycasting values for just the pure map.  The map coordinates reflect the real map, where I set (0, 0) to be the lower-left corner of the room.  After adjusting the map parameters, the map was plotted as below:</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab9/world_setup.png" alt="" />
+                                    <h5>Grid Localization</h5>
+                                    <p class="text-justify">I tried implementing an RX command over Bluetooth for over 5 hours, but I was not able to successfully implement sending a command from the python script to the robot.  With only one-way communication, there was no way to tell the robot to move, stop, and perform an observation step in succession.  Ideally, the computer would send these commands, and the robot would receive and send an acknowledge signal when it has received these commands.</p>
+                                    <p class="text-justify">The get_pose() function returns the latest odometry pose data.  However, since I am manually moving and restarting the robot each time,  it is not useful to try to get the odometry pose data.  The odometry pose data must be recorded continuously as the robot moves across the environment.  Therefore I implemented get_pose() manually, as the location on the map measured using a tape measure. </p>
+                                    </p><pre><code><p class="text-left">def get_pose(self):
+    """Get the latest odometry pose data in the map frame.
+
+    Do NOT change the arguments or return values of this function.
+
+    Returns:
+        (x, y, a) (float, float, float): A tuple with latest odometry pose in the map frame 
+                                        in the format (x, y, a) with units (meters, meters, degrees)
+
+    """
+    return (0.5207, 0.4953, 0) # pose measured from tape measure</p></code></pre>
+                                    <p class="text-justify">In order to perform the observation loop, I had the robot continuously stream its time, yaw angle, reference yaw rate, and distance measurement over Bluetooth and used a Bash script to pipe the output to a .txt file in the lab9 script directory.  The function perform_observation_loop() should command the robot to turn at a specified yaw rate and return the range data, of the specified size (18 in our case).  Since I could not implement sending a Bluetooth signal, I pre-programmed the robot to turn at 50 deg/sec for 720 degrees of rotation (2 rotations) using the set_reference_rotate() function in Lab 7.   The perform_observation_loop() function parses the .txt file to find the distance when the reference signal is set.  It then finds and averages the distances within a specified angle tolerance where the yaw angle the distance was measured matches the spaced angular readings (every 20 degrees).  The code for perform_observation_loop() is shown below:</p>
+                                    </p><pre><code><p class="text-left">def perform_observation_loop(self, observation_count, rot_vel):
+    """ Implement a Bluetooth command, that tells your robot to 
+    start an anti-clockwise, rotational scan using PID control on 
+    the gyroscope. The scan needs to be a full 360 degree rotation with 
+    at least 18 readings from the TOF sensor, with the first reading taken 
+    at the current heading of the robot. At the end of the scan, 
+    have your robot send back the TOF measurements via Bluetooth. 
+
+    If you haven't already, write an automated script to pair down your 
+    measurements to 18 approximately equally spaced readings such that 
+    the first reading was taken at the heading angle of the robot.
+    Use a reasonable rotational speed to achieve this behavior.
+
+    Do NOT change the arguments or return values of the function since it will 
+    break the localization code. This function is called by the member function 
+    "get_obseration_data" in the Localization class (robot_interface.py), 
+    with observation_count = 18 and rot_vel = 30. 
+    You may choose to ignore the values in the arguments.
+
+    Args:
+        observation_count (integer): Number of observations to record
+        rot_vel (integer): Rotation speed (in degrees/s)
+
+    Returns:
+        obs_range_data (ndarray): 1D array of 'float' type containing observation range data
+    """
+    # local variables
+    t_trigger_start = 0
+    d_x_w = 0
+    d_y_w = 0
+    theta_w_start = 0
+    obs_per_cell = observation_count # number of scan observationsrang
+    scan_angles = np.arange(180/obs_per_cell, 360, 360/obs_per_cell)
+    scan_angle_tol = 3
+
+    # parse the data
+    data_list = []
+    data = open('bluetooth_data.txt','r')
+    for line in data:
+        line = line.replace('(', ' ')
+        line = line.replace(')', ' ')
+        stripped_line = line.strip()
+        line_list = stripped_line.split(', ')
+        float_list = [float(i) for i in line_list]
+        data_list.append(float_list)
+
+    # find only the relevant parts to plot
+    data_array = np.asarray(data_list)
+    t = data_array[:, 0]
+    t_trigger = np.where(t > t_trigger_start)
+    t_show = t[t_trigger[0][0]:t_trigger[0][-1]+1]
+    yaw_show = data_array[t_trigger[0][0]:t_trigger[0][-1]+1, 3]
+    yaw_start_show = data_array[t_trigger[0][0]:t_trigger[0][-1]+1, 4]
+    ref_show = data_array[t_trigger[0][0]:t_trigger[0][-1]+1, 5]
+    distance_show = data_array[t_trigger[0][0]:t_trigger[0][-1]+1, 6]
+
+    # find where the step response occurs
+    t_step = np.where(ref_show > 0)
+    yaw_start_resp = yaw_start_show[t_step[0][0]:t_step[0][-1]+1]
+    yaw_resp = yaw_show[t_step[0][0]:t_step[0][-1]+1]
+    distance_resp = distance_show[t_step[0][0]:t_step[0][-1]+1]
+
+    # pair down readings to match fixed number for Bayes filter by taking the average within an angular tolerance
+    distance_paired = np.zeros([obs_per_cell])
+    distance_count = np.zeros([obs_per_cell])
+    for i in range(0, len(scan_angles)):
+        for j in range(0, len(yaw_resp)):
+            if (abs(abs(yaw_resp[j]-yaw_start_resp[j])%360 - scan_angles[i]) &#60;= scan_angle_tol):
+                distance_paired[i] = distance_paired[i] + distance_resp[j]
+                distance_count[i] = distance_count[i] + 1
+    distance_paired = np.divide(distance_paired, distance_count) # average the readings within the tolerance    
+
+    return np.multiply(distance_paired, 0.001) # convert to m</p></code></pre>
+                                    <p class="text-justify">Below is a comparison of plotting all of the raw data vs the paired-down raw data (18 values):</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab9/raw_vs_paired_graph.png" alt="" />
+                                    <p class="text-justify">Without a method for sending a Bluetooth signal to the robot, the set_vel() command was not completed.</p>
+                                    <h6>Virtual Robot Bayes Filter</h6>
+                                    <h6>Real Robot Bayes Filter</h6>
+                                    <h5></h5>
+                                    <p class="text-justify"></p>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
