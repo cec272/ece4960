@@ -72,3 +72,7 @@ Kr = np.linalg.inv(R).dot(B.transpose().dot(S))
 
 # Sets the param value "K"
 K = Kr
+Acl = A - np.matmul(B,K)
+Ecl = scipy.linalg.eigvals(Acl)
+print(K)
+print(Ecl)

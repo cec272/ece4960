@@ -2530,7 +2530,7 @@ axs[1].set_title('Response of theta(t)')</p></code></pre>
 if not self.K is None:
     self.u = np.dot(self.K, error) # multiply the error by the control gain
 else:
-    self.u = 0</p></code></pre>a
+    self.u = 0</p></code></pre>
                                     <p class="text-justify">Below are my edits to pendulumParam.py:</p>
                                     <pre><code><p class="text-left">####################################################
 #                 Controller
@@ -2540,6 +2540,30 @@ Kr = control.place(A, B, dpoles)
 
 # Sets the param value "K"
 K = Kr</p></code></pre>
+                                    <p class="text-justify">I then modified pendulumParam.py to calculate LQR K-gains instead of the pole placement method.  The values along the diagonal of the weight matrix Q correspond to the weighting parameter of z, zdot, theta, and thetadot, respectively.  The value of R corresponds to the weighting parameter of u (force).  I started with values from our lecture, Q = diag(1, 1, 10, 100) and R = [0.001], which means we peanlize in increasing order, u, x, xdot, theta, and thetadot.  This makes sense because we care most about keeping the pendulum upright, so we want the angular rate and angle of the pendulum to be small.  We do not care as much about how much we move the robot, so we do not penalize z, zdot, and the control input as much.  After running these values, I found the optimal values of K from the Ricotti equation, which are [-31.622, -77.457, 762.175, and 412.750], and the poles are [-503.368, -.715+.821j, -0,.715-0.821j, -0.822].  These are quite different from my pole placement values, as one pole is placed quite far in the left hand plane, while the others are close to the origin.  Below, we can see that these values of Q and R are sufficient to stabilize the pendulum.  </p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/xE_Vj9riiZ4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab11/pole_place_vs_lqr.png" alt="" />
+                                    <p class="text-justify">Above is a performance comparison between the pole placement method (right) and these LQR K-gains (left).  We can see that the LRQ method is more optimal, as theta is better controlled (about 1 degree less variation when the reference signal is applied).  We do notice that there is less overshoot of the cart and slightly better settling time.  </p>
+                                    <p class="text-justify">Below are my edits to pendulumParam.py to add the LQR K-gains:</p>
+                                    <pre><code><p class="text-left">####################################################
+#                 Controller
+####################################################
+
+# LQR
+Q = np.matrix([[1, 0, 0, 0],
+[0, 1, 0, 0],
+[0, 0, 10, 0],
+[0, 0, 0, 100]])
+R = np.matrix([0.001])
+S = scipy.linalg.solve_continuous_are(A, B, Q, R)
+Kr = np.linalg.inv(R).dot(B.transpose().dot(S))
+
+# Sets the param value "K"
+K = Kr
+Acl = A - np.matmul(B,K)
+Ecl = scipy.linalg.eigvals(Acl)
+print(K)
+print(Ecl)</p></code></pre>
                                     <pre><code><p class="text-left"></p></code></pre>
                                     <h5></h5>
                                     <p class="text-justify"></p>
