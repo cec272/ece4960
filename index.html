@@ -163,6 +163,26 @@
                             <h5 class="text-center">Lab 10: Planning and Execution</h5>
                         </div>
                     </div>
+                    <!-- Portfolio Item 11-->
+                    <div class="col-md-6 col-lg-4 mb-5">
+                        <div class="portfolio-item mx-auto" data-toggle="modal" data-target="#portfolioModal11">
+                            <div class="portfolio-item-caption d-flex align-items-center justify-content-center h-100 w-100">
+                                <div class="portfolio-item-caption-content text-center text-white"><i class="fas fa-plus fa-3x"></i></div>
+                            </div>
+                            <img class="img-fluid" src="assets/img/portfolio/lab11.jpeg" alt="" />
+                            <h5 class="text-center">Lab 11: LQR on the Inverted Pendulum</h5>
+                        </div>
+                    </div>
+                    <!-- Portfolio Item 12-->
+                    <div class="col-md-6 col-lg-4 mb-5">
+                        <div class="portfolio-item mx-auto" data-toggle="modal" data-target="#portfolioModal12">
+                            <div class="portfolio-item-caption d-flex align-items-center justify-content-center h-100 w-100">
+                                <div class="portfolio-item-caption-content text-center text-white"><i class="fas fa-plus fa-3x"></i></div>
+                            </div>
+                            <img class="img-fluid" src="assets/img/portfolio/safe.png" alt="" />
+                            <h5 class="text-center">Lab 12: LQG on the Inverted Pendulum</h5>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -367,7 +387,7 @@ digitalWrite(lightPin, LOW);
                                     <h5>Request a Float</h5>
                                     <p class="text-justify">Looking through the robot command framework, I discovered how I could format data types and send them from the Artemis Nano to the computer.  At first, I was unsuccessful, but I learned that the byte size must be 2 bytes greater than the size of the byte type, which for a float, would be a total of 6 bytes.  I sent over the float, 3.14159265354, and received a similar, but not quite exact return.  It is possible that the data is being corrupted or not parsed correctly.  </p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab2/requestfloat.png" alt="" />
-                                    </p><pre><code><p class="text-left">case REQ_FLOAT:
+                                    <pre><code><p class="text-left">case REQ_FLOAT:
 Serial.println("Going to send a float");
 //TODO: Put a float (perhaps pi) into a command response and send it.
 res_cmd->command_type = GIVE_FLOAT;
@@ -380,7 +400,7 @@ break;
                                     <h5>Test the Data Rate</h5>
                                     <p class="text-justify">Now, we modified the bytestream section of the code to include sending and receiving a packets of data. Using some data logging tools, we can see how the Bluetooth module handles this data and whether or not any packets are lost.  I used the largest possible 32-bit integer (2^32 – 1) and the largest possible 64-bit integer (2^64 – 1) to fill these values.  The latency, found by subtracting the reported times between transmissions in the serial monitor, was averaged and plotted over time and in a histogram.  I calculated the percentage of dropped packets by comparing the total number of packets received on the computer (in the linux terminal) and the number of packets sent from the Arduino, which is reported in the serial monitor.</p>
                                     <p class="text-justify">The code below demonstrates how data was created and packaged into a data packet.  We also used the unpack function to display this package as a human-readable decimal number.  Special attention is necessary for the byte size, as the byte size of the integers, package, and unpacked must all be the same size.</p>
-                                    </p><pre><code><p class="text-left">if (bytestream_active)
+                                    <pre><code><p class="text-left">if (bytestream_active)
 {
 res_cmd->command_type = BYTESTREAM_TX;
 res_cmd->length = 54;
@@ -403,7 +423,7 @@ amdtpsSendData((uint8_t *)res_cmd, 54);
 long t = micros();
 Serial.printf("Package: %3d, Time: %3d\n",package,t);
 package++;  </p></code></pre>
-                             </p><pre><code><p class="text-left"># Unpack from an example stream that transmits a 2-byte and a
+                             <pre><code><p class="text-left"># Unpack from an example stream that transmits a 2-byte and a
 # 4-byte integer as quickly as possible, both little-endian.
 if (code == Commands.BYTESTREAM_TX.value):
 print(unpack("&lt;IQQQQQQ",data));</p></code></pre>   
@@ -604,7 +624,7 @@ print(unpack("&lt;IQQQQQQ",data));</p></code></pre>
                                     <iframe class="embed-responsive video"  height="315" src="https://www.youtube.com/embed/Nb6tQl19JbM" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <p class="text-justify">In order to make the robot go straight, I modified the code to take into the minimum speed offset for both motors.  This was considered the baseline speed for the motors, and I applied an equal offset of +40  to increase the motor speed so that the vehicle moves at a reasonable velocity. I discovered that the minimum speed on the ground is different than the minimum speed in the air, as additional torque is required to overcome the additional inertia and friction while the robot is on the ground to begin moving.   The code runs such that the robot commands forward speed to both motors for 2.5 seconds, after which the robot commands 0 speed.  This works well to move the robot about 7 feet, consistently in a straight line.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/L2K6_DOeVyg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                    </p><pre><code><p class="text-left">#define LEFT_MOTOR 0
+                                    <pre><code><p class="text-left">#define LEFT_MOTOR 0
 #define RIGHT_MOTOR 1
 #define FWD 0
 #define REV 1
@@ -639,7 +659,7 @@ void loop()
 }  </p></code></pre>
                                      <p class="text-justify">Another test for the robot was to command turns.  Turns are a little more difficult, but the tightest turn that can be made is completed by commanding the two motors in opposite directions.  My plan was to command the robot to move forward, turn 90 degrees left, then continue moving forward.  Forward motion was commanded similarly to the straight motion test.  However, turns required a little more fine tuning.  I found that additional speed was required to avoid the motors from stalling, as compared to forward motion.  This makes sense, as the motors have to overcome the “binding” and “scrubbing” that adds additional friction while turning.  Also, I found that the minimum speeds in reverse are different than the minimum speeds in forward.  After fine tuning and testing to ensure the timing of the turn was complete, I was able to command the robot to perform the left turn.  There was much more variation in angle turned than the forward motion test, which is why feedback control would be especially useful in this case. </p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/DxLtJ86nUEA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                    </p><pre><code><p class="text-left">#define LEFT_MOTOR 0
+                                    <pre><code><p class="text-left">#define LEFT_MOTOR 0
 #define RIGHT_MOTOR 1
 #define FWD 0
 #define REV 1
@@ -696,7 +716,7 @@ void loop()
 }  </p></code></pre>
                                     <p class="text-justify">I also modified the lourdest frequency code from Lab 1 to control the robot.  In this test, the robot moves forward, when a loud frequency is detected.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/g4oWzexpNNc" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                    </p><pre><code><p class="text-left">void loop()
+                                    <pre><code><p class="text-left">void loop()
 {
     if (myPDM.available())
     {
@@ -742,7 +762,7 @@ void loop()
                                     <h6>Jupyter Lab</h6>
                                     <p class="text-justify">The Jupyter notebook allowed us to quickly write and test our Python code for controlling the robot in the simulator.  The motivation for my code was to move the robot in a rectangle, such that the robot’s path meets the criteria for a rectangle: opposite sides should be parallel and equal in length, and the turns should be 90 degrees.  While we cannot exactly measure the accuracy, if the robot completes the entire path by replicating the same exact turns and moving the exact same distance on opposite sides, a good open loop control shall start and end in the same position.  The code was created similarly to controlling the actual robot, by commanding and holding a set velocity for a certain amount of time.  One difference is that this virtual robot accepts linear and angular velocity commands, while on the robot, we controlled the motor speeds of the left and right motors.  This timing was done completely experimentally, until the robot replicated the desired  motion. The most difficult portion was the angles, where by experimentation, it was determined turning at 0.5 m/s for  3.1 seconds produced an approximate 90 degree left turn.   The robot started at  (-2.01,6.00,0.00,0.00) and ended at (-2.08,6.06,0.00,-4.77), which means we were quite successful in open-loop control for a rectangular motion. </p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/NavyV_hfVto" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                    </p><pre><code><p class="text-left">robot.set_vel(.5,0)
+                                    <pre><code><p class="text-left">robot.set_vel(.5,0)
 time.sleep(3)
 robot.set_vel(0,0)
 time.sleep(.3)
@@ -823,15 +843,15 @@ robot.set_vel(0,0)</p></code></pre>
                                     <iframe class="embed-responsive video"  height="315" src="https://www.youtube.com/embed/GaeMeKiNkaw" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <h6>Calibrating Time of Flight Sensor</h6>
                                     <p class="text-justify">I ran the Example7_Calibration script, but for some reason, the program would not run after requesting a distance below 10 cm is detected for 1 second.  After debugging the code, I found that 2 calls were not made, which cause the function to be caught in the while(!distanceSensor.checkForDataReady()) loop.  I added distanceSensor.startRanging(); and distanceSensor.stopRanging(); within the while loop, which allowed the script to function.  After running this function, the calibration offset was found to be 24 mm.  I manually added this offset in the setup of my function since the calibration script did not do so for the Apollo board.</p>
-                                    </p><pre><code><p class="text-left">distanceSensor.setOffset(24); // Manually set the offset for the sensor</p></code></pre>
+                                    <pre><code><p class="text-left">distanceSensor.setOffset(24); // Manually set the offset for the sensor</p></code></pre>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/R3wEJ3ZTFYE" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <h6>Adjusting Time of Flight Sensor Timing</h6>
                                     <p class="text-justify">From Section 2.5.2 of the VL53L1 sensor <a href="hhttps://cdn.sparkfun.com/assets/e/1/8/4/e/VL53L1X_API.pdf">manual</a>, the function VL53L1_SetMeasurementTimingBudgetMicroSeconds() sets the allowable time to perform one range measurement (between a maximum of 20 ms and 1000 ms), and the function VL53L1_SetInterMeasurementPeriodMilliSeconds() sets the allowable time between two sensor measurements.  The default timing budget for the sensor is 100 ms, but I wanted to reduce that to its minimum of 20 ms in order to have a more reactive sensor (greater sampling rate).  The default intermeasurment time is also 100 ms, but I reduced this to as little as possible, which is 20 ms, since this time must be greater than or equal to the timing budget.  From the tests in Lab 3, I found that the robot’s maximum linear speed is 2.67 m/s.  This means that with these new settings, at the robot’s maximum speed, it would travel 5.34 centimeter between both during sensor reading and consecutive readings.  Below is the code that I added to the setup() section.</p>
-                                    </p><pre><code><p class="text-left">distanceSensor.setTimingBudgetInMs(20); // Manually set the timing budget
+                                    <pre><code><p class="text-left">distanceSensor.setTimingBudgetInMs(20); // Manually set the timing budget
 distanceSensor.setIntermeasurementPeriod(20); // Manually set the intermeasurment period</p></code></pre>
                                     <h6>Adjusting Time of Flight Sensor Mode</h6>
                                     <p class="text-justify">In the above section, we found that the robot may travel up to 10.64 cm between the reading of one measurement and the reading of a consecutive measurement (adding the timing budget and intermeasurment period).  From the sensor manual, between the three ranging modes, the short mode has better ambient immunity and can read measurements up to 1.3 m.  That means in this mode, the robot should be able to detect an object 1.2 m before reaching the object.  Therefore, I chose the short distance mode because this mode seems to have the best ambient performance while still being able to react and avoid collisions.  Below is the code that I added to the setup() section.</p>
-                                    </p><pre><code><p class="text-left">distanceSensor.setDistanceModeShort(); // Set the sensor to 1.3 m range</p></code></pre>
+                                    <pre><code><p class="text-left">distanceSensor.setDistanceModeShort(); // Set the sensor to 1.3 m range</p></code></pre>
                                     <h6>Validating Time of Flight Sensor Readings</h6>
                                     <p class="text-justify">From the sensor manual, the sensor employes limit logic to detect a valid reading from the sensor.  Sigma is the standard deviation of the measurement, and signal is the amplitude (strength) of the return signal that is reflected from the target and detected by the sensor.  For a measurement to be flagged as valid, sigma must be less than 15 mm, and signal must be less than 1 Mcps.  The limits can be modified or removed to improve the maximum ranging distance, at the expense of standard deviation.  I ran Example3_StatusAndRange, and modified the set-up with the settings (from above) that I intended to use for the sensor.  In the serial monitor, the code should print either ‘Sigma fail’, ‘Signal Fail’, or ‘Wrapped target fail’ if the limits are exceeded.  I tried moving a target with as fast of a frequency as I could (in excess of the maximum speed of the robot) in front of the sensor in an attempt to exceed these limit, but I was unable to, as the sensor always reported ‘Good’ for the range status.  I also tried multiple lighting conditions and different object materials in front of the sensor, but was not able to trigger a fail.  This means the sensor in these setting will work well with our robot, as it should be able to reliably detect objects, even while the robot is in motion.</p>
                                     <h6>Testing Time of Flight Sensor</h6>
@@ -849,7 +869,7 @@ distanceSensor.setIntermeasurementPeriod(20); // Manually set the intermeasurmen
                                     <p class="text-justify">First, I created a program called obstacle_avoidance_brake.  This program moves the robot forward, and comes to a stop if an obstacle is detected in its path.  The goal was to optimize the forward speed, object distance detection, and braking such that the robot moves as fast as possible, and comes to a stop before hitting an object.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/FFj5G906HW8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <p class="text-justify">The code below demonstrates the functionality of this program.  It is split into 3 main parts: sensor measurements, where the robot reads from the distance sensor; control logic, where the robot decides if it should go forward or brake; and control action, where the robot commands the motors to complete the desired control.  To improve braking performance, a reverse command is applied as an impulse at only the beginning of a braking event. </p>
-                                    </p><pre><code><p class="text-left">void setup() {
+                                    <pre><code><p class="text-left">void setup() {
 // *** Set-up distance sensor *** //
 Wire.begin();
 Serial.begin(9600);
@@ -944,7 +964,7 @@ if (rangeStatus == 0){ // perform action only if sensor measurement is valid
                                     <p class="text-justify">Secondly, I created a program called obstacle_avoidance_turn, where the robot moves forward, and instead of bringing the robot to a stop when an object is detected closer than a set value from the distance sensor, the robot turns left until the measured distance is greater than the set value.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/snxQMrie0mk" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <p class="text-justify">The code below is similar to object_avoidance_brake; however turning logic is added.</p>
-                                    </p><pre><code><p class="text-left">void setup() {
+                                    <pre><code><p class="text-left">void setup() {
 // *** Set-up distance sensor *** //
 Wire.begin();
 Serial.begin(9600);
@@ -1047,7 +1067,7 @@ if (rangeStatus == 0){ // perform action only if sensor measurement is valid
                                     <p class="text-justify">In the video below, we can see the robot approaches the wall a couple of times and just misses a collison.  This occurs at very shallow angles, where the wall is not in the field of view of the sensor.  This can be mitigated by increasing the sensor field of view, by adding additional distance sensors, rotating  the sensor, or by changing the type of sensor.  Additionally, more intelligent sensor logic by using filters and incorporating localization may improve object avoidance.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/rAWUsFCwzWw" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <p class="text-justify">The code for the virtual robot is shown below:</p>
-                                    </p><pre><code><p class="text-left">def perform_obstacle_avoidance(robot):
+                                    <pre><code><p class="text-left">def perform_obstacle_avoidance(robot):
 while True:
     ### Loop variables ###
     v = 0
@@ -1130,7 +1150,7 @@ perform_obstacle_avoidance(robot)</p></code></pre>
                                     <p class="text-justify">Using SerialPlot, I was able to plot changing roll and pitch from at angles [-90, 0, 90] over time.  The sensor responds relatively well, but it is apparent there is much noise in the readings.  Also, there is some interference when we move the acceleration in only one direction, such as roll = 90, pitch = 0.  The pitch reading peaks between -90 and 90 degrees, because, I assume that there is a nonzero reading in that causes the function to approach arctan(infinity).  I had originally thought the effect would be reduced by using a complementary low-pass filter, however, it was not.  I rewrote the equations, this time substituting an arcsin function for the arctan function.  This allowed the function to be more continuous, instead of spiking as the angles were greater than [-90, 90] degrees.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/obYSTvpr7CA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <p class="text-justify">The below code was modified to include the adding pitch and roll measurements:</p>
-                                    </p><pre><code><p class="text-left">// returns the pitch in degrees using the acceleration data
+                                    <pre><code><p class="text-left">// returns the pitch in degrees using the acceleration data
 double getPitchAccel(){
     double aX = getFormattedFloat( myICM.accX(), 5, 2).toDouble();
     double aY = getFormattedFloat( myICM.accY(), 5, 2).toDouble();
@@ -1157,7 +1177,7 @@ double getRollAccel(){
                                     <p class="text-justify">Below are the pitch and roll from raw acceleration values plotted in the time and frequency domain, respectively</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/pitch_accel_fft.png" alt="" />
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/roll_accel_fft.png" alt="" />
-                                    </p><pre><code><p class="text-left">import numpy as np
+                                    <pre><code><p class="text-left">import numpy as np
 import matplotlib.pyplot as plt
 import csv
 
@@ -1224,7 +1244,7 @@ def low_pass_filter(csvFile,csvCol,tau,fc):
                                     <p class="text-justify">I implemented the filter into my Arduino code and found that the filter worked well!  After a series of tests, moving the sensor from [-90, 90] degrees, and shaking and tapping the sensor, I am satisfied with the filter’s ability to cut noise. </p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/1vxIp-IBul8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/TpWSC3yjr7M" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                    </p><pre><code><p class="text-left">// returns a low pass filtered data, given 
+                                    <pre><code><p class="text-left">// returns a low pass filtered data, given 
 double lowPass(String dataType, double raw, double Tau, double Fc){
     double filterPrior = 0;
     if (dataType == "roll_accel"){
@@ -1250,7 +1270,7 @@ double lowPass(String dataType, double raw, double Tau, double Fc){
                                     <h5>Gyroscope</h5>
                                     <p class="text-justify">I computed the roll, pitch, and yaw using the gyroscope data.  Compared to the accelerometer, this data was much less noisy, since we are effectively filtering by integrating the data.  The time delay between the raw acceleration roll and pitch and gyroscope roll and pitch is almost negligible, and there is a time delay when applying the low-pass filter to the acceleration values.  I notice that the gyroscope data may have an offset, depending on how the sensor was initialized.  If the sensor begins at time zero at zero pitch, roll, and yaw, then there is no offset, since these values are initialized at zero.  However, for a non-zero initialization, there is an offset. There is also small drift, caused by small integration errors that gradually increases over time.  I also tried decreasing the delay in the system from 30 ms to 10 ms, which effectively increased the sampling rate by 3 x.  I noticed a marginal increase in responsiveness, but the sampling rate was originally high enough that I could not visually inspect a difference.  If I decreased the delay to 0, I noticed a much higher increase in the accelerometer measurement noise, so I decided that 10 ms was an ideal delay.  </p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/CDXV4Z1GKpA" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                    </p><pre><code><p class="text-left">// returns the pitch in degrees using the gyro data
+                                    <pre><code><p class="text-left">// returns the pitch in degrees using the gyro data
 double getPitchGyro(){
     double omegaY = getFormattedFloat( myICM.gyrY(), 5, 2).toDouble(); // read raw
     double t = micros();  
@@ -1291,7 +1311,7 @@ double getYawGyro(){
                                     <p class="text-justify">I then added a complementary filter, which combines the integrated, high pass filtered gyroscope data with the low pass filtered accelerometer data.  This is a much computationally easier method than performing a Kalman filter with the two data.  I tuned the value of alpha until I was satisfied with the amount of accuracy, stability, and drift, which was alpha = 0.1 for pitch, and alpha = 0.2 for roll.  From the video below, we can see that the complementary filter effectively fuses the outputs from the accelerometer with the gyroscope.  We can see that there are much less noise and greater accuracy than the raw accelerometer output, and it is not affected by the gyroscope’s drift over time.  However, we can also see that there is more time delay, which could make a controller unstable, as it reduces the phase margin of the loop transfer function. </p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/K2vrS8obBcg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/9lOTeNfY9Y0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                    </p><pre><code><p class="text-left">// fuses angles from accelerometer and gyro
+                                    <pre><code><p class="text-left">// fuses angles from accelerometer and gyro
 double compFilter(String dataType, double alpha){
     double angleAccel = 0;
     double angleGyro = 0;
@@ -1328,7 +1348,7 @@ double compFilter(String dataType, double alpha){
                                     <h5>Magnetometer</h5>
                                     <p class="text-justify">I added the magnetometer equations to estimate the yaw angle.  Unfortunately, I was not able to reliably estimate the yaw angle because the readings from this quickly jumped between [-180 and 180] degrees, without any intermediary useful data.  After many hours of troubleshooting and consulting, I believe my magnetometer is nonfunctional, so I will only use gyroscope data to estimate yaw angle.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/_ELoqRoMWMs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                    </p><pre><code><p class="text-left">// returns the yaw from the magnetometer
+                                    <pre><code><p class="text-left">// returns the yaw from the magnetometer
 double getYawMag(){
     // normalize the mag readings
     double magnX = getFormattedFloat( myICM.magX(), 5, 2).toDouble()*10e-6; // read raw
@@ -1355,7 +1375,7 @@ double getYawMag(){
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/ramp_response_1.png" alt="" />
                                     <p class="text-justify">From the above plot, we can see that the maximum rotational rotational speed was 250 deg/sec.  This occurs when the motors are set to 196, which is the saturation value for our plant.  Our deadband occurs from when the motors are set from 0 to 170, which means our range for the motors is only [170, 196].  Not seen in the graph is that the left motor begins to spin before the right motor.  Although the motor spins while the robot is lifted, the motor value for the robot to spin while on the ground (on tile) is much higher.  This is likely due to the additional friction and moment of inertia of the entire vehicle.</p>
                                     <p class="text-justify">Below is the bluetooth and ramp code added to the Arduino script:</p>
-                                    </p><pre><code><p class="text-left">if (bytestream_active) // send data over Bluetooth
+                                    <pre><code><p class="text-left">if (bytestream_active) // send data over Bluetooth
 {
     res_cmd->command_type = BYTESTREAM_TX;
     res_cmd->length = 20;
@@ -1396,13 +1416,13 @@ void rampMotors(){
     }
 }</p></code></pre>
                                     <p class="text-justify">Below is the bash script used to pipe text from the terminal to a file:</p>
-                                    </p><pre><code><p class="text-left">#!/bin/bash
+                                    <pre><code><p class="text-left">#!/bin/bash
 
 echo "Starting: /media/sf_ece4960/labs/Lab6/main.py"
 echo "Saving to: /media/sf_ECE_4960_-_Fast_Robots/Lab6Report/bluetooth_data.txt"
 python3 -u /media/sf_ece4960/labs/Lab6/main.py | tee /media/sf_ECE_4960_-_Fast_Robots/Lab6Report/bluetooth_data.txt</p></code></pre>
                                     <p class="text-justify">Below is the MATLAB script used to plot the data:</p>
-                                    </p><pre><code><p class="text-left">clear all
+                                    <pre><code><p class="text-left">clear all
 
 data_array=[];
 
@@ -1457,7 +1477,7 @@ fprintf('Std dev of yaw rate is %5.2f\n', std(yaw_rate_step));</p></code></pre>
                                     <p class="text-justify">I then tried to find the lowest possible speed the robot can reliably rotate about its own axis.  For this, I wrote a function stepMotors() that steps the robot after waiting for 10 seconds, then provides a step input to the motors of the magnitude specified.  I tested the robot at motor inputs of [160, 170, 180, 190, 200, 210, 220], which within the valid the range I found through ramping the motors.</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/step_response_combined.png" alt=""/>
                                     <p class="text-justify">From the above plots, we can see that at u=160, the robot does not move.  At u=170 and u=180, the motors barely start moving, and the robot does not complete one whole rotation.  The robot also not not continuously move, as in the graphs, the yaw rate approaches 0 after a few seconds.  At u = 190, the robot completes one whole rotation, but it is very slow.  Although there is positive yaw rate for the whole period, it is not constant.   At u = 200, it is the first time that the yaw rate seems more or less constant, averaging about 201 deg/s and standard deviation of 33.  At u = 210, the yaw rate is slightly more consistent, with an average of 221 deg/s and a standard deviation of 27.  I then added one more test, at u = 220, and at this time, I needed to change the robot’s battery.  I noticed the robot was much faster, which shows how so many different parameters (surface friction, weight, battery voltage, etc.) affect the yaw rate of the robot.  This is why we need closed loop control to respond to these disturbances.  The mean yaw rate from this test was 250 deg/s, and the standard deviation was 0.51, which is a really consistent yaw rate.   I concluded that the minimum input to reliably rotate the robot around its own axis was 200, but it depends on our acceptance criteria of the data’s standard deviation.</p>
-                                    </p><pre><code><p class="text-left">// steps the motor according to the speed defined by motor_input [0-255] and for time in time_step (s)
+                                    <pre><code><p class="text-left">// steps the motor according to the speed defined by motor_input [0-255] and for time in time_step (s)
 void stepMotors(double motor_input, double time_step){
     // local variables
     double t = micros();
@@ -1491,8 +1511,8 @@ void stepMotors(double motor_input, double time_step){
                                     <p class="text-justify">Below are some plots from various control constants of the system:</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/pid_dualmotor_graphs.png" alt="" />
                                     <p class="text-justify">Below is the function added for PID control of both motors:</p>
-                                    </p><pre><code><p class="text-left">motor_feedback(200 , yaw_rate_data, 0.6, 5, 0, 10);</p></code></pre>
-                                    </p><pre><code><p class="text-left">// PID control.  Apply reference signal after waiting 10 seconds for as long as defined by time_step.
+                                    <pre><code><p class="text-left">motor_feedback(200 , yaw_rate_data, 0.6, 5, 0, 10);</p></code></pre>
+                                    <pre><code><p class="text-left">// PID control.  Apply reference signal after waiting 10 seconds for as long as defined by time_step.
 void motor_feedback(double set_point, double sensor, double Kp, double Ki, double Kd, double time_step){
     double t = micros();
     // waits 10 seconds before starting
@@ -1552,8 +1572,8 @@ void motor_feedback(double set_point, double sensor, double Kp, double Ki, doubl
                                     <p class="text-justify">I then implemented single_motor_control(), which takes the same code and constants as the dual motor PID control, however, only sets the speed for one of  the motors.  This is set for either left or right motors (to spin counterclockwise about the z-axis) and sets the other motor to speed 50 to unlock it.  With this method, we can potentially control our yaw rate to a lower value with more stability because the single motor runs at a higher speed (in the linear range of the motor) to achieve the same yaw rate as the dual motor.  At the slowest speed for the dual motor, 50 deg/s, with using the left motor, the average steady-state error was 1.98 deg/s and the standard deviation was 9.82 deg/s, a decrease of 28% and 13%, respectively.  For the right motor, the average steady state error was 2.09 deg/s and the standard deviation was 11.10 deg/s, and improvement of 24% and 1%, respectively.  The slowest speed I was able to reliably maintain was 30 deg/s, which maintained an average error of 2.79 (std. dev 8.22) for the left motor, and 40 deg/s for the right motor, which maintained an average error of 2.61 deg/s (std. Dev 10.47).  </p>
                                     <p class="text-justify">Given the new slowest speed, 30 deg/s, for the same scenario as in the “ToF Sensor Accuracy” section, the robot would shift in orientation by 0.0686 degrees between ranging sensor measurements.  If the  robot starts at 5 meters  and 0 degrees with respect to an obstacle, the sensor reading would be 0.5000004 m, and at 45 degrees will be 0.5006 m.  This gives a standard deviation of 2.53E-7 m and 4.24E-4 m, which is almost negligible.  The distance measurements are more likely to be affected by sensor noise than the robot’s movements in this case.</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/pid_singlemotor_graphs.png" alt="" />
-                                    </p><pre><code><p class="text-left">single_motor_feedback("left", 30, yaw_rate_data, 0.6,  5, 0, 10);</p></code></pre>
-                                    </p><pre><code><p class="text-left">// PID control for single motor, specified by motor.  Apply reference signal after waiting 10 seconds for as long as defined by time_step.
+                                    <pre><code><p class="text-left">single_motor_feedback("left", 30, yaw_rate_data, 0.6,  5, 0, 10);</p></code></pre>
+                                    <pre><code><p class="text-left">// PID control for single motor, specified by motor.  Apply reference signal after waiting 10 seconds for as long as defined by time_step.
 void single_motor_feedback(String motor, double set_point, double sensor, double Kp, double Ki, double Kd, double time_step){
     double t = micros();
     // waits 10 seconds before starting
@@ -1624,7 +1644,7 @@ void single_motor_feedback(String motor, double set_point, double sensor, double
                                     <p class="text-justify">Below, the odometry pose is plotted in red, and the ground truth pose is plotted in green.  I plotted every 0.1 seconds, which is a 10 Hz sampling rate and seems to be good enough to plot a smooth trajectory, without causing the plotter to crash.  We can see that when the robot is stationary, noise causes the odometry pose to ‘drift’ and move about, while the true pose shows the robot is stationary.  As the robot moves, integration errors caused by the odometry slip and noise cause the odometry pose to drift even more.  We can see that for a small point in time, the odometry displacement is approximately equal to the true pose displacement.  However, the pose is quite off (up to meters).  First, the odometry pose starts in a different location than the true pose, as it has no way of initializing correctly.  As the drift increases, the odometry pose begins to differ in shape and orientation.  The odometry pose error seems to increase with higher speeds and larger angular change.  </p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab6/odom_pose.png" alt="" />
                                     <p class="text-justify">Below is the code that was added to the Jupyter notebook:</p>
-                                    </p><pre><code><p class="text-left">def update_plot(robot):
+                                    <pre><code><p class="text-left">def update_plot(robot):
     # Get the true pose
     pose_gt = robot.get_gt_pose()
     
@@ -1674,7 +1694,7 @@ while (True):
                                     <h5>Grid Localization Using Bayes Filter</h5>
                                     <p class="text-justify">I extracted and set-up the base code per the lab instructions.  I did have an issue with setting-up the code that was solved by deleting the folders found in the /home/artemis/catkin_ws folder.  I made sure to back-up my previous code.</p>
                                     <p class="text-justify">Below is my pseudocode for the Bayes Filter:</p>
-                                    </p><pre><code><p class="text-left"># In world coordinates
+                                    <pre><code><p class="text-left"># In world coordinates
 def compute_control(cur_pose, prev_pose):
     """ Given the current and previous odometry poses, this function extracts
     the control information based on the odometry motion model.
@@ -1843,9 +1863,9 @@ def update_step(obs):
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/bathroom_drawn_map.jpg" alt="" />
                                     <h6>Sanity Check</h6>
                                     <p class="text-justify">I then added the following code to the robot.  In each loop, the robot takes a scan from the ToF sensor.  I modified the PID controller from Lab 6 to take into input a set-point.  The set-point is created by the function set_reference_rotate(), which creates a reference signal from 0 to the desired yaw rate and back to 0 after the robot has rotated a defined number of degrees. From the data collected in Lab 6, I had the robot move at 50 degrees/second for 720 degrees.  This is a fairly reliable turning speed for the robot, and it performs 2 rotations.  I could rotate the robot more, which would give more ToF returns and build a higher resolution map, but the robot does not spin perfectly about its axis.  Since we cannot estimate and account for the translation while spinning, this creates inaccuracies in the measurements.  Additionally, errors come from incorrect yaw estimation (due to noise and drift via z-axis gyro rate integration) and noise from the ToF sensor.  We can see that there are rotation differences between the two complete scans, false short distance measurements, and false long distance measurements.  </p>
-                                    </p><pre><code><p class="text-left">set_reference_rotate(720, 50, yaw_angle_data, 15);
+                                    <pre><code><p class="text-left">set_reference_rotate(720, 50, yaw_angle_data, 15);
 motor_feedback_2(reference, yaw_rate_data, 0.6, 5, 0);</p></code></pre>
-                                    </p><pre><code><p class="text-left">// sets the reference signal to the angular_set_point at time_start until the robot has rotated specified angle
+                                    <pre><code><p class="text-left">// sets the reference signal to the angular_set_point at time_start until the robot has rotated specified angle
 void set_reference_rotate(double degrees_rotation, double angular_set_point, double yaw_angle, double time_start){
     double t = micros();
     if (!motors_start){ // current time &#60; time_start
@@ -1869,7 +1889,7 @@ void set_reference_rotate(double degrees_rotation, double angular_set_point, dou
                                     <p class="text-justify">Below is the coordinate transformation matrix I calculated:</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/coord_transform.jpg" alt="" />
                                     <p class="text-justify">I implemented this transformation in my MATLAB code used for plotting:</p>
-                                    </p><pre><code><p class="text-left">d_x_w = 0; % inches
+                                    <pre><code><p class="text-left">d_x_w = 0; % inches
 d_y_w = 0; % inches
 theta_w_start = 0; % radians
 z_x_w = [];
@@ -1908,7 +1928,7 @@ axis equal</p></code></pre>
                                     <p class="text-justify">Below is my manual wall estimate overlaid on the scatter plot:</p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab7/multi_map_converted.png" alt="" />                                    
                                     <p class="text-justify">Below is my code used to create the start and end points:</p>
-                                    </p><pre><code><p class="text-left">% manually clean-up map
+                                    <pre><code><p class="text-left">% manually clean-up map
 prompt = {'Done with shapes? [Y/N]: '};
 dlgtitle = 'Text Input';
 definput = {'N'};
@@ -1982,7 +2002,7 @@ end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters<
                                     <p class="text-justify">First, I wrote compute_control().  This function determines the control information using the odometry motion model, taking as inputs two consecutive poses and returns rotation 1, translation, and rotation 2. </p>
                                     <h5>Code</h5>
                                     <h6>Compute Control</h6>
-                                    </p><pre><code><p class="text-left">def compute_control(cur_pose, prev_pose):
+                                    <pre><code><p class="text-left">def compute_control(cur_pose, prev_pose):
     """ Given the current and previous odometry poses, this function extracts
     the control information based on the odometry motion model. In world coordinates.
 
@@ -2021,7 +2041,7 @@ end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters<
     return delta_rot_1, delta_trans, delta_rot_2</p></code></pre>
                                     <h6>Odometry Motion Model</h6>
                                     <p class="text-justify">Next, I wrote odom_motion_model(), which returns the probability of the current pose, given the prior pose and current control output.  First, I computed the control output given the two input poses using compute_controll().  Then, the probability is calculated using the gaussian distribution of the odometry model, with the control input as the mean and knowledge of our system as sigma.  </p>
-                                    </p><pre><code><p class="text-left">def odom_motion_model(cur_pose, prev_pose, u):
+                                    <pre><code><p class="text-left">def odom_motion_model(cur_pose, prev_pose, u):
     """ Odometry Motion Model, in world coordinates
 
     Args:
@@ -2066,7 +2086,7 @@ end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters<
     return prob</p></code></pre>
                                     <h6>Prediction Step</h6>
                                     <p class="text-justify">The prediction step returns our guess, belief_bar, for the state of the robot= using the odometry motion model in the form of probabilities for each of the cells in the map.  For each of the prior states in the space [20X20X18], we check the probability that it could have moved to a new state in the map [20X20X18], given the odom_motion_model and prior belief.  Belief_bar is the sum of the prior belief_bar plus the probability from odom_motion_model multiplied by the prior belief.  This function uses the most amount of for loops (6) and therefore takes the most amount of computation time.  </p>
-                                    </p><pre><code><p class="text-left">def prediction_step(cur_odom, prev_odom):
+                                    <pre><code><p class="text-left">def prediction_step(cur_odom, prev_odom):
     """ Prediction step of the Bayes Filter.
     Update the probabilities in loc.bel_bar based on loc.bel from the previous time step and the odometry motion model.
 
@@ -2123,7 +2143,7 @@ end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters<
                                 loc.bel_bar[i][j][k] = loc.bel_bar[i][j][k] + odom_motion_model(loc.mapper.from_map(i, j, k) , loc.mapper.from_map(i0, j0, k0), u)*loc.bel[i0][j0][k0]</p></code></pre>
                                     <h6>Sensor Model</h6>
                                     <p class="text-justify">Sensor_model() is used to define the probability of each sensor measurement, given the pose of the robot and sensor measurements.  This function uses ray-casting to compute what the distance measurements should be for each cell, given our map and wall information.  For each sensor measurement [18], we calculate the probability given the Gaussian distribution for the sensor, with the ray casting measurement as the mean and given sigma for the sensor.</p>
-                                    </p><pre><code><p class="text-left">def sensor_model(obs, x_t):
+                                    <pre><code><p class="text-left">def sensor_model(obs, x_t):
     """ This is the equivalent of p(z|x).
 
 
@@ -2168,7 +2188,7 @@ end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters<
     return prob_array</p></code></pre>
                                     <h6>Update Step</h6>
                                     <p class="text-justify">Finally, the update step combines our prediction, bel_bar with the sensor information, allowing us to fuse together our knowledge from the prior state estimate, odometry information, and distance sensor measurement to obtain a new state estimate.  The update step loops through each of the cells in the map [20X20X18] and finds the probability of the state (belief), given the probability from the sensor model and belief_bar.  Also, belief is normalized by dividing each unit by the sum of belief.</p>
-                                    </p><pre><code><p class="text-left">def update_step():
+                                    <pre><code><p class="text-left">def update_step():
     """ Update step of the Bayes Filter.
     Update the probabilities in loc.bel based on loc.bel_bar and the sensor model.
     """
@@ -2254,7 +2274,7 @@ end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters<
                                     <h5>Grid Localization</h5>
                                     <p class="text-justify">I tried implementing an RX command over Bluetooth for over 5 hours, but I was not able to successfully implement sending a command from the python script to the robot.  With only one-way communication, there was no way to tell the robot to move, stop, and perform an observation step in succession.  Ideally, the computer would send these commands, and the robot would receive and send an acknowledge signal when it has received these commands.</p>
                                     <p class="text-justify">The get_pose() function returns the latest odometry pose data.  However, since I am manually moving and restarting the robot each time,  it is not useful to try to get the odometry pose data.  The odometry pose data must be recorded continuously as the robot moves across the environment.  Therefore I implemented get_pose() manually, as the location on the map measured using a tape measure. </p>
-                                    </p><pre><code><p class="text-left">def get_pose(self):
+                                    <pre><code><p class="text-left">def get_pose(self):
     """Get the latest odometry pose data in the map frame.
 
     Do NOT change the arguments or return values of this function.
@@ -2268,7 +2288,7 @@ end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters<
                                     <p class="text-justify">In order to perform the observation loop, I had the robot continuously stream its time, yaw angle, reference yaw rate, and distance measurement over Bluetooth and used a Bash script to pipe the output to a .txt file in the lab9 script directory.  The function perform_observation_loop() should command the robot to turn at a specified yaw rate and return the range data, of the specified size (18 in our case).  Since I could not implement sending a Bluetooth signal, I pre-programmed the robot to turn at 50 deg/sec for 720 degrees of rotation (2 rotations) using the set_reference_rotate() function in Lab 7.   The perform_observation_loop() function parses the .txt file to find the distance when the reference signal is set.  It then finds and averages the distances within a specified angle tolerance where the yaw angle the distance was measured matches the spaced angular readings (every 20 degrees). Below is a video of the robot performing one observation loop.</p>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/Scw9PGh4Eg0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <p class="text-justify">The code for perform_observation_loop() is shown below:</p>
-                                    </p><pre><code><p class="text-left">def perform_observation_loop(self, observation_count, rot_vel):
+                                    <pre><code><p class="text-left">def perform_observation_loop(self, observation_count, rot_vel):
     """ Implement a Bluetooth command, that tells your robot to 
     start an anti-clockwise, rotational scan using PID control on 
     the gyroscope. The scan needs to be a full 360 degree rotation with 
@@ -2356,7 +2376,7 @@ end_pts_array = array(end_pts.*0.0254) % convert to python format and in meters<
                                     <p class="text-justify">I performed these steps five times while running step_bayes_filter() after each step.  Below is the output from the trajectory plotter after the five runs. The raw belief output can be found <a href="https://docs.google.com/spreadsheets/d/1hVkHaPCZJjppQEB3vdbI1F3eMbHGIR6iISiynEhO8NQ/edit?usp=sharing">here</a>. Below is a plot of the truth pose (via measuring tape) vs the belief from the 5 steps of the Bayes filter. </p>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab9/truth_vs_estimate_plot.png" alt="" />
                                     <p class="text-justify">Below is a table of the output:</p>
-                                    </p><pre><code><p class="text-left">Step     Truth Pose (m, m,  deg)    Top Belief (m, m, deg)    Error (m, m, deg)     Probability
+                                    <pre><code><p class="text-left">Step     Truth Pose (m, m,  deg)    Top Belief (m, m, deg)    Error (m, m, deg)     Probability
 _____    _______________________    ______________________    __________________    ___________
 
 {'0'}      "(0.521,0.495,0)"          "(0.55,0.25,-30)"       "(0.029,0.245,30)"       0.999   
@@ -2369,7 +2389,6 @@ _____    _______________________    ______________________    __________________
                                     <p class="text-justify">Overall, we can see the Bayes Filter does a decent job at estimating the robot’s pose.  The estimated pose was fairly accuracy, except for at point 1, wheer the estimated pose seems to be reflected across the map.  This may be because at time step 1, there is not enough data such that top belief is the correct pose.  I also believe that symmetry of the room may have played a factor, as the distances recorded at the truth pose, 1 may look similar to the distances that would have been recorded at the estimated pose, 1.  From time steps 2, 3, 4, and 5, the estimated pose converges closer and closer to the truth pose.  In the final step, the estimated pose was only 7 cm off in the x-direction and 5 cm off in the y-direction!  The accuracy is also limited by the resolution of the grid, as with the cell size of 0.1 m, we can expect an error from the grid size to be (0, 0.07) meters (euclidean distance from the edge of a cell to the center of the cell).  For the angle cell size of 20 deg, the expected error from discretization is (0, 10) degrees.  From these 5 time steps, the average error was (0.2055 m, 0.2910 m, 26.6667 deg), and the standard deviation was (0.2583 m, 0.3332 m, 10.3280 deg). </p>
                                     <p class="text-justify">This week, I hope to meet with the TAs to try to debug the Bluetooth RX command with the robot.  Then, I will implement the full localization, moving the robot, recording odometry via the accelerometer, performing the update step, and pausing the robot as the base computer performs the Bayes update step.</p>
                                     <h5></h5>
-                                    <p class="text-justify"></p>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
@@ -2402,6 +2421,160 @@ _____    _______________________    ______________________    __________________
                                     </div>
                                     <!-- Portfolio Modal - Image-->
                                     <img class="img-fluid rounded mb-5" src="assets/img/portfolio/submarine.png" alt="" />
+                                    <!-- Portfolio Modal - Text-->
+                                    <p class="mb-5">To be completed</p>
+                                    <button class="btn btn-primary" data-dismiss="modal">
+                                        <i class="fas fa-times fa-fw"></i>
+                                        Close Window
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Portfolio Modal 11-->
+        <div class="portfolio-modal modal fade" id="portfolioModal11" tabindex="-1" role="dialog" aria-labelledby="portfolioModal6Label" aria-hidden="true">
+            <div class="modal-dialog modal-xl" role="document">
+                <div class="modal-content">
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                    </button>
+                    <div class="modal-body text-center">
+                        <div class="container">
+                            <div class="row justify-content-center">
+                                <div class="col-lg-8">
+                                    <!-- Portfolio Modal - Title-->
+                                    <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0" id="portfolioModal6Label">Lab 11b: LQR on the Inverted Pendulum on a Cart</h2>
+                                    <!-- Icon Divider-->
+                                    <div class="divider-custom">
+                                        <div class="divider-custom-line"></div>
+                                        <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
+                                        <div class="divider-custom-line"></div>
+                                    </div>
+                                    <!-- Portfolio Modal - Image-->
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/lab11.jpeg" alt="" />
+                                    <!-- Portfolio Modal - Text-->
+                                    <h5>Feedback control of an Idealized Pendulum on a Cart System</h5>
+                                    <p class="text-justify">The system parameters I changed to match my robot are:</p>
+                                    <pre><code><p class="text-left">m2 = 0.523    # Mass of the cart [kg] 
+w = 0.14      # Width of the cart [m]
+h = 0.07      # Height of the cart [m]</p></code></pre>
+                                    <p class="text-justify">After running the system open loop, I verified what is to expected: since there is no feedback control, the inverted pendulum “falls over,” and oscillates in an uncontrolled manner.  As time increases, the magnitude of the oscillations decrease because the system is underdamped.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/wwnB59KbHFk" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab11/open_loop_perf.png" alt="" />
+                                    <p class="text-justify">I wrote controlDesign.py to investigate how both z and theta compares to a step response in u.  This way, I could easily adjust the poles such that for a stable system, z will approach a steady state value of 1, and u will approach a steady state value of 0.</p>
+                                    <p class="text-justify">I investigated the step response of the open-loop system:</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab11/open_loop_step.png" alt="" />
+                                    <p class="text-justify">The open-loop system has eigenvalues {0, -3.005, -1.387, 2.901}, which makes the system unstable since one of the poles is in the right-hand-plane.  Which we can see that the system is unstable because both z and theta approach infinity to a step input in u.</p>
+                                    <p class="text-justify">I iterated upon placing the poles in the left-hand-plane until z approached the step value, while trying to optimize the settling time, rise time, and overshoot.  I noticed that as I made the poles more negative, the rise time decreases; however, there is more overshoot. Also, poles that are too negative cause the cart to run off the “rails.”   I found that [-.1, -.2, -.3, -.4] was too passive and [-5, -6, -7, -8] was too aggressive.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab11/pole_place_step_response.png" alt="" />
+                                    <p class="text-justify">I settled on poles that had a greater settling time, with less overshoot because I believe the actual robot has quite slow reacting motors, which would not make the aggressive poles work.  The values I settled on are are [-1, -2, -3, -4], which gives values [-1.548, -4.005, 29.447, and 10.231] for K.  Below is the simulation of the cart for my chosen poles of [-1, -2, -3, -4].  We can see that the pendulum is stable for multiple reference inputs, and settles in about 1 second.  The system seems well  damped, and the pendulum never goes beyond 6 degrees from its vertical position.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/gSrHXGiH1RU" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify">Below is the code to controlDesign.py:</p>
+                                    <pre><code><p class="text-left">import numpy as np
+import numpy.linalg as LA
+import matplotlib.pyplot as plt
+import pendulumParam as P
+import control as ctl
+
+# get state space matrix
+A = P.A
+B = P.B
+C = P.C
+D = P.D
+
+# calculate the eigenvalues
+E = LA.eigvals(A)
+
+# desired closed loop eigenvalues
+P = np.array([-5, -6, -7, -8])
+# P = np.array([-3, -4, -5, -6])
+
+# sets the param value "K"
+K = ctl.place(A, B, P)
+
+# check for closed loop eigenvalues
+Acl = A - np.matmul(B,K)
+Ecl = LA.eigvals(Acl)
+
+# create open loop system
+ssol = ctl.StateSpace(A, B, C, D)
+
+# create closed loop system
+sscl = ctl.StateSpace(Acl, B, C, D)
+
+# solve for Kr
+Kdc = ctl.dcgain(sscl);
+Kr = 1/Kdc[0]
+
+# create scaled input closed loop system
+syscl_scaled = ctl.StateSpace(Acl, B*Kr, C, D)
+
+# run the sisotool
+t, y = ctl.step_response(syscl_scaled)
+
+# plot the step response
+fig, axs = plt.subplots(2)
+fig.suptitle('Step Response, Poles:' + str(P))
+axs[0].plot(t, y[0])
+axs[0].set_ylabel('Amplitude')
+axs[0].set_title('Response of z(t)')
+axs[1].plot(t, y[2])
+axs[1].set_xlabel('Time [s]')
+axs[1].set_ylabel('Amplitude')
+axs[1].set_title('Response of theta(t)')</p></code></pre>
+                                    <p class="text-justify">Below are my edits to pendulumControllerDynamics.py:</p>
+                                    <pre><code><p class="text-left">#Feedback control. If there's no gain it assigns the control to be 0
+if not self.K is None:
+    self.u = np.dot(self.K, error) # multiply the error by the control gain
+else:
+    self.u = 0</p></code></pre>a
+                                    <p class="text-justify">Below are my edits to pendulumParam.py:</p>
+                                    <pre><code><p class="text-left">####################################################
+#                 Controller
+####################################################
+dpoles = [-1, -2, -3, -4]
+Kr = control.place(A, B, dpoles)
+
+# Sets the param value "K"
+K = Kr</p></code></pre>
+                                    <pre><code><p class="text-left"></p></code></pre>
+                                    <h5></h5>
+                                    <p class="text-justify"></p>
+                                    <button class="btn btn-primary" data-dismiss="modal">
+                                        <i class="fas fa-times fa-fw"></i>
+                                        Close Window
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Portfolio Modal 12-->
+        <div class="portfolio-modal modal fade" id="portfolioModal12" tabindex="-1" role="dialog" aria-labelledby="portfolioModal6Label" aria-hidden="true">
+            <div class="modal-dialog modal-xl" role="document">
+                <div class="modal-content">
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true"><i class="fas fa-times"></i></span>
+                    </button>
+                    <div class="modal-body text-center">
+                        <div class="container">
+                            <div class="row justify-content-center">
+                                <div class="col-lg-8">
+                                    <!-- Portfolio Modal - Title-->
+                                    <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0" id="portfolioModal6Label">Lab 12b: LQG on the Inverted Pendulum on a Cart</h2>
+                                    <!-- Icon Divider-->
+                                    <div class="divider-custom">
+                                        <div class="divider-custom-line"></div>
+                                        <div class="divider-custom-icon"><i class="fas fa-star"></i></div>
+                                        <div class="divider-custom-line"></div>
+                                    </div>
+                                    <!-- Portfolio Modal - Image-->
+                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/safe.png" alt="" />
                                     <!-- Portfolio Modal - Text-->
                                     <p class="mb-5">To be completed</p>
                                     <button class="btn btn-primary" data-dismiss="modal">

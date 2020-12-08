@@ -56,8 +56,19 @@ D = np.zeros((4, 1))
 ####################################################
 #                 Controller
 ####################################################
-dpoles = [-1, -2, -3, -4]
-Kr = control.place(A, B, dpoles)
+
+# Pole Placement
+#dpoles = [-1, -2, -3, -4]
+#Kr = control.place(A, B, dpoles)
+
+# LQR
+Q = np.matrix([[1, 0, 0, 0],
+              [0, 1, 0, 0],
+              [0, 0, 10, 0],
+              [0, 0, 0, 100]])
+R = np.matrix([0.001])
+S = scipy.linalg.solve_continuous_are(A, B, Q, R)
+Kr = np.linalg.inv(R).dot(B.transpose().dot(S))
 
 # Sets the param value "K"
 K = Kr

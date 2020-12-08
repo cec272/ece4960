@@ -21,7 +21,7 @@ D = P.D
 E = LA.eigvals(A)
 
 # desired closed loop eigenvalues
-P = np.array([-5, -6, -7, -8])
+P = np.array([-1, -2, -3, -4])
 # P = np.array([-3, -4, -5, -6])
 
 # sets the param value "K"
