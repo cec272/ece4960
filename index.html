@@ -2544,17 +2544,23 @@ K = Kr</p></code></pre>
                                     <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/xE_Vj9riiZ4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                                     <img class="img-fluid rounded mb-5" src="assets/img/lab11/pole_place_vs_lqr.png" alt="" />
                                     <p class="text-justify">Above is a performance comparison between the pole placement method (right) and these LQR K-gains (left).  We can see that the LRQ method is more optimal, as theta is better controlled (about 1 degree less variation when the reference signal is applied).  We do notice that there is less overshoot of the cart and slightly better settling time.  </p>
+                                    <p class="text-justify">I then tried to adjust the values in Q and R to according match the what I expect the robot is able to do in real life, using values collected in Lab 3.  For example, I will permit a 1.5 m error in z, limit zdot to 1 m/s, limit theta to 1 degree, and limit  thetadot to 2 deg/s.  I will also limit the control input to 1 N.  This is because from my testing, these values for zdot and the control input are within the limits of the motor, and I would like the pendulum to remain relatively upright, with only 1 degree of deviation.  Since the ToF sensor is relatively accurate, we can permit 1.5 m displacement from the starting position.  Below are the calculations used for the values of Q and R:</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab11/qr_calcs.png" alt="" />
+                                    <p class="text-justify">I implemented these values and confirmed that the controller is able to stabilize the system.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/IhkxClvEm7w" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab11/lqr_modified.png" alt="" />
+                                    <p class="text-justify">We can see that compared to the Q and R weights from lecture, this controller stabilizes the pendulum very well, as the maximu deviation in theta is about 1 degree.  However, the rise time is much slower, as we are limiting the maximum speed and force the motors can go.  This is a problem for fast changes in the reference, as, for example, in this case, the cart does not track the reference signal well for reference inputs less than 2 seconds apart.</p>
                                     <p class="text-justify">Below are my edits to pendulumParam.py to add the LQR K-gains:</p>
                                     <pre><code><p class="text-left">####################################################
 #                 Controller
 ####################################################
 
 # LQR
-Q = np.matrix([[1, 0, 0, 0],
+Q = np.matrix([[0.4, 0, 0, 0],
 [0, 1, 0, 0],
-[0, 0, 10, 0],
-[0, 0, 0, 100]])
-R = np.matrix([0.001])
+[0, 0, 821, 0],
+[0, 0, 0, 206]])
+R = np.matrix([1])
 S = scipy.linalg.solve_continuous_are(A, B, Q, R)
 Kr = np.linalg.inv(R).dot(B.transpose().dot(S))
 

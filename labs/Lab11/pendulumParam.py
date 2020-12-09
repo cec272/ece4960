@@ -62,11 +62,11 @@ D = np.zeros((4, 1))
 #Kr = control.place(A, B, dpoles)
 
 # LQR
-Q = np.matrix([[1, 0, 0, 0],
+Q = np.matrix([[0.4, 0, 0, 0],
               [0, 1, 0, 0],
-              [0, 0, 10, 0],
-              [0, 0, 0, 100]])
-R = np.matrix([0.001])
+              [0, 0, 821, 0],
+              [0, 0, 0, 206]])
+R = np.matrix([1])
 S = scipy.linalg.solve_continuous_are(A, B, Q, R)
 Kr = np.linalg.inv(R).dot(B.transpose().dot(S))
 
