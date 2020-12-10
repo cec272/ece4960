@@ -2570,9 +2570,50 @@ Acl = A - np.matmul(B,K)
 Ecl = scipy.linalg.eigvals(Acl)
 print(K)
 print(Ecl)</p></code></pre>
-                                    <pre><code><p class="text-left"></p></code></pre>
-                                    <h5></h5>
-                                    <p class="text-justify"></p>
+                                    <h5>Feedback Control of a Non-Ideal Pendulum on a Cart System</h5>
+                                    <p class="text-justify">In order to make our simulation behave like our actual robot, the control input, u, needs to be limited to represent the maximum and minimum force the motors can output.  This represents deadband and saturation.  From lab 3 and lab 4, I found that the maximum force the robot can output is 2.792 N, when the motors are set to their max value of 255.  The minimum value for the motors is 74.  Below, I calculated that the minimum force to move the robot is 0.810 N and the maximum is 2.792 N.  Note: this assumes linear force output of the motors, which is likely not the actual case.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab11/min_max_u_cals.jpeg" alt="" />
+                                    <p class="text-justify">I added these parameters to pendulumParam.py:</p>
+                                    <pre><code><p class="text-left">u_min = 0.810   # Min motor force to move cart [N]
+u_max = 2.792   # Max motor force of motors [N]</p></code></pre>
+                                    <p class="text-justify">I edited pendulumControllerDynamics.py to capture the minimum and maximum motor force.</p>
+                                    <pre><code><p class="text-left">#Feedback control. If there's no gain it assigns the control to be 0 
+if not self.K is None: # a controller has been implemented
+    u_des = np.dot(self.K, error) # multiply the error by the control gain
+    if abs(u_des) &#60;= self.u_min:
+        self.u = 0
+    elif abs(u_des) >= self.u_max:
+        self.u = np.sign(u_des)*self.u_max
+    else:
+        self.u = u_des
+else:
+    self.u = 0</p></code></pre>
+                                    <p class="text-justify">I found that implementing these values would make my system unstable, and after multiple tries of modifying the values in Q and R, I was unable to make the system stable.  This was completely contributed to the deadband, as the system cannot place small force inputs to stabilize the system.  The system never uses control input that saturates the plant.  I looked on campuswire, and I made some of the suggested changes, to make u_min = 0.2 N and changing the reference signal such that it is always changing.  I made my reference signal a sinusoidal output, with an amplitude of 2 and frequency of 10.  This ensures that there is always error, which keeps u outside of the deadband.  I kept my original values for Q and R and modified u_min and ctrl such that the system was stable:</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/MaVpiExUIF4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>                                    
+                                    <p class="text-justify">We can see that the steady state value for z is approximately 0, as the frequency of the reference signal’s y_offset value was 0.</p>
+                                    <h5>Feedback Control with Sensor Noise</h5>
+                                    <p class="text-justify">If we add sensor noise, then we no longer have full-state feedback.  We can implement a state observer to estimate our state, but for lab, I’ll investigate what happens when I add noise into our state variables.</p>
+                                    <p class="text-justify">From lab 5, I found that the standard deviation in ToF sensor measurements (used to calculate z)  is 0.005 meters, and from the IMU datasheet, the standard deviation in the gyroscope measurements is 0.015 degrees/s.  I was unable to verify the standard deviation of zdot and theta, so I estimated these parameters as 0.001 m/s and 0.1 degrees.  I added these parameters to pendulumParam.py</p>
+                                    <p class="text-justify">Modifications to pendulumParam.py</p>
+                                    <pre><code><p class="text-left">#Noise parameters of measurements
+sig_z = 0.005           # stddev of ToF measurement [m]
+sig_zdot = 0.005        # stddev of ToF measurement [m/s]
+sig_theta = 0.000174    # stddev of IMU [rad]
+sig_thetadot = 0.000262 # stddev of IMU [rad/s]</p></code></pre>
+                                    <p class="text-justify">I then added random samples from a normal distribution using the state variable’s standard deviation, and modified pendulumControllerDynamics.py to add these noise to the state values at each time step.</p>
+                                    <p class="text-justify">Modifications to pendulumControllerDynamics.py</p>
+                                    <pre><code><p class="text-left">#Add sensor noise to current state values
+curr_state = np.array([[z], [zdot], [theta], [thetadot]])   #current state
+n = np.array([[np.random.normal(0, self.sig_z)], [np.random.normal(0, self.sig_zdot)], [np.random.normal(0, self.sig_theta)], [np.random.normal(0, self.sig_thetadot)]])
+n_curr_state = np.add(curr_state, n)
+
+#calculting the new control force
+des_state = np.array([zref, [0.0], [np.pi], [0.0]])         #desired state
+error = des_state - n_curr_state</p></code></pre>
+                                    <p class="text-justify">However, for the parameters I entered, the controller was not stable.  It was not until I decreased the noise by 3 orders of magnitude that the controller was stable.  Below is a video of the pendulum with sigma values [0.000005, 0.000005, 0.000000174, 0.000000262].</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/R1JjM5NJvKU" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab11/lqr_noise.png" alt="" />
+                                    <p class="text-justify">We can see that adding noise has a negative impact on stability, as the pendulum oscillates more with even just this small amount of noise added.  This shows that adding noise can have a significant impact on the system. In this lab, we found that sensor noise, deadband, saturation can easily make the system unstable.  There are also a lot of other factors that make implementing the inverted pendulum system difficult in real life.  These include: wheel slippage, time delay due to processing time and sample rate of sensors, non-linearities that were simplified for this simulation, and inertia in the motors and wheels.  </p>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window

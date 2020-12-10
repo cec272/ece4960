@@ -16,7 +16,7 @@ from plotDataZ import plotData
 from signalGenerator import signalGen
 
 #Initialize and rename for convenience
-ref = signalGen(amplitude=.5, frequency=0.05, y_offset=0) 
+ref = signalGen(amplitude=0.5, frequency= 0.05, y_offset=0) 
 ctrl = pendulumCnt(param=P,zref=ref.square)
 
 plt.close('all')

@@ -8,11 +8,19 @@ from scipy import signal
 import control
 
 #Physical parameters of the inverted pendulum known to the controller
-m1 = 0.03   # Mass of the pendulum [kg]
-m2 = 0.523   # Mass of the cart [kg] 
-ell = 1.21  # Length of the rod [m]
-g = -9.81   # Gravity, [m/s^2]
-b = 0.78   # Damping coefficient [Ns]
+m1 = 0.03       # Mass of the pendulum [kg]
+m2 = 0.523      # Mass of the cart [kg] 
+ell = 1.21      # Length of the rod [m]
+g = -9.81       # Gravity, [m/s^2]
+b = 0.78        # Damping coefficient [Ns]
+u_min = 0.810   # Min motor force to move cart [N]
+u_max = 2.792   # Max motor force of motors [N]
+
+#Noise parameters of measurements
+sig_z = 0.005           # stddev of ToF measurement [m]
+sig_zdot = 0.005        # stddev of ToF measurement [m/s]
+sig_theta = 0.000174    # stddev of IMU [rad]
+sig_thetadot = 0.000262 # stddev of IMU [rad/s]
 
 #parameters for animation
 w = 0.14      # Width of the cart [m]
@@ -74,5 +82,3 @@ Kr = np.linalg.inv(R).dot(B.transpose().dot(S))
 K = Kr
 Acl = A - np.matmul(B,K)
 Ecl = scipy.linalg.eigvals(Acl)
-print(K)
-print(Ecl)

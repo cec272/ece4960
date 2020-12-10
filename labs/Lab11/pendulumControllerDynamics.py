@@ -6,9 +6,28 @@ from signalGenerator import signalGen
 
 class pendulumCnt:
 
-    def __init__(self, m1=None, m2=None, ell=None, b=None, g=None,
+    def __init__(self, u_min=None, u_max=None, m1=None, m2=None, ell=None, b=None, g=None,
                  Ts=None,angle_limit=None, K=None, param=None, zref=None):
         #Initial state conditions
+        
+        # Sensor noise characteristics
+        if not param is None:
+            self.sig_z = param.sig_z
+            self.sig_zdot = param.sig_zdot
+            self.sig_theta = param.sig_theta
+            self.sig_thetadot = param.sig_thetadot
+        
+        # Min motor constants, N
+        if not u_min is None:
+            self.u_min = u_min
+        elif not param is None:
+            self.u_min = param.u_min
+            
+        # Max motor constants, N
+        if not u_max is None:
+            self.u_max = u_max
+        elif not param is None:
+            self.u_max = param.u_max
         
         # Mass of the pendulum, kg
         if not m1 is None:
@@ -79,17 +98,27 @@ class pendulumCnt:
         #Get reference inputs from signal generators
         zref = self.zref(t)      #control cart z location
         
-        #calculting the new control force
+        #Add sensor noise to current state values
         curr_state = np.array([[z], [zdot], [theta], [thetadot]])   #current state
+        n = np.array([[np.random.normal(0, self.sig_z)], [np.random.normal(0, self.sig_zdot)], [np.random.normal(0, self.sig_theta)], [np.random.normal(0, self.sig_thetadot)]])
+        n_curr_state = np.add(curr_state, n)
+        
+        #calculting the new control force
         des_state = np.array([zref, [0.0], [np.pi], [0.0]])         #desired state
-        error = des_state - curr_state
+        error = des_state - n_curr_state
 
         #Feedback control. If there's no gain it assigns the control to be 0
-        if not self.K is None:
-            self.u = np.dot(self.K, error) # multiply the error by the control gain
+        if not self.K is None: # a controller has been implemented
+            u_des = np.dot(self.K, error) # multiply the error by the control gain
+            if abs(u_des) <= self.u_min:
+                self.u = 0
+            elif abs(u_des) >= self.u_max:
+                self.u = np.sign(u_des)*self.u_max
+            else:
+                self.u = u_des
         else:
             self.u = 0
-
+        
         #simplifications for the calculations - constants
         Sy = np.sin(theta)
         Cy = np.cos(theta)
@@ -101,8 +130,8 @@ class pendulumCnt:
         ydot2 = thetadot
         ydot3 = (1.0/D)*((self.m1+self.m2)*self.m1*self.g*self.ell*Sy    - self.m1*self.ell*Cy*      (self.m1*self.ell*thetadot*thetadot*Sy - self.b*zdot)) - self.m1*self.ell*Cy*(1.0/D)*self.u
         dydt = [ydot0, ydot1, ydot2, ydot3]
+         
         return dydt
-
 
     ####################################################
     #              Extra Functions
