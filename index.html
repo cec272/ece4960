@@ -179,7 +179,7 @@
                             <div class="portfolio-item-caption d-flex align-items-center justify-content-center h-100 w-100">
                                 <div class="portfolio-item-caption-content text-center text-white"><i class="fas fa-plus fa-3x"></i></div>
                             </div>
-                            <img class="img-fluid" src="assets/img/portfolio/safe.png" alt="" />
+                            <img class="img-fluid" src="assets/img/portfolio/lab12.png" alt="" />
                             <h5 class="text-center">Lab 12: LQG on the Inverted Pendulum</h5>
                         </div>
                     </div>
@@ -2645,9 +2645,118 @@ error = des_state - n_curr_state</p></code></pre>
                                         <div class="divider-custom-line"></div>
                                     </div>
                                     <!-- Portfolio Modal - Image-->
-                                    <img class="img-fluid rounded mb-5" src="assets/img/portfolio/safe.png" alt="" />
                                     <!-- Portfolio Modal - Text-->
-                                    <p class="mb-5">To be completed</p>
+                                    <h5>Check out the Kalman Filter</h5>
+                                    <p class="text-justify">The matrices A and B are used in the prediction step of the Kalman filter, where are predicted state.  For the continuous-time case, we use the A and B from the state-space model of the pendulum.  However, our system is a discrete-time system, with a sample rate defined as the variable T_update in pendulumParam.py.  From the z-transform, we get a new model for the state-space equation, which is computed as Ad and Bd.</p>
+                                    <p class="text-justify">From our C-matrix, the only state that we are measuring directly is our last state, thetadot.  Our mu matrix, the estimiated state, is size 4x1, so we are estimating all of our states, z, zdot, theta, and thetadot. </p>
+                                    <p class="text-justify">I had to change a few lines of the code to run due to matrix size  issues in the source code.  From looking at campuswire, I edited pendulumNonlinearDynamics.py to cast the values of ydot0, ydot1, ydot2, and ydot3 as floats before putting them in the dydt matrix.  I also edited runSimulation.py to used the value of y_kf[0,0] instead of the 2X1 matrix and the value of z_ref[0] instead of the 1X0 matrix.  After the edits, I ran the simulation, which produced a stable pendulum.  The pendulum performance is shown below.  We can see that our system is smooth, and the rise time of the system seems to be about 1.2 seconds.  The pendulum never deviates more than 1 degree from vertical, and its angular approaches a maximum value of about 1 degree/s.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/first_run.png" alt="" />
+                                    <p class="text-justify">If we check the observability of our state matricies by comparing the size of A and the rank of our observability matrix, control.obs(A, C), we can see that we have one unobservable state.  This because our C matrix is [0, 0, 0, 1], and unobservable state is z.  However, during initialization of  our estimated state and mu, in runSimulation.py, states_est and mu are set to the correct initial state, states.  Our model of the pendulum dynamics used in the Kalman filter matches the model in the of the pendulum dynamics used for the simulation, so the Kalman filter is able to predit z (along with our other states), from our control inputs.  </p>
+                                    <p class="text-justify">In order to analyze our uncertainty, I modified runSimulation.py to save all instances of mu and sigma, and I plotted the time history of the diagonal of sigma over time.  Below, I plotted the time history of sigma with the correct initial guess of the states.  We can see how our standard deviation for the unobservable state, z, increases linearly, while the standard deviation for zdot, thetadot, and theta increase sharply, then taper off an increase much more slowly, albeit still increasing.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/sigma_plot.png" alt="" />
+                                    <p class="text-justify">I then added a large error of 0.5 to each of the states by adding 0.5 to mu.  This gives an error of 0.5 m, 0.5 m/s, 28 deg/s, and 28 deg, respectively.  Below, I plotted the performance when this error is added.  The system was still stable, but it’s performance was degraded.  We can see how the estimated state and the actual state in zdot, theta, and thetadot begin to converge after about 1 second, due to our Kalman filter.  There is still an error in z because it is not observable, but the error is an offset, so our system is stable.  It does mean, however, that there was a constant error in our systems ability to track a reference signal.  If this offset is too much, we may exceed our bounds in the z direction (if there is any).  Also, the system may be unstable if our model in the Kalman filter had some error, or if there is noise in our control inputs. </p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/initial_error.png" alt="" />
+                                    <p class="text-justify">I changed my controller to the LQR controller I created for Lab 11b by adding the following code to runSimulation.py:</p>
+                                    <pre><code><p class="text-left">Q = np.array([[0.4, 0, 0, 0],
+[0, 1, 0, 0],
+[0, 0, 821, 0],
+[0, 0, 0, 206]])
+R = np.array([[1]])
+S = scipy.linalg.solve_continuous_are(P.A, P.B, Q, R)
+Kr = np.linalg.inv(R).dot(P.B.transpose().dot(S))</p></code></pre>
+                                    <p class="text-justify">I ran the simulation with the LQR controller, and its performance was actually a little worse than the pole placement method used in the sample code provided.  The settling time of the cart was approximatly 2 seconds, compared to approximately 1.3 seconds before.  The pendulum, however, deviates slightly less than in the pole placement method, with less overshoot.  I believe this is because I penalized u quite heavily in order to try to prevent the motors from saturating in Lab 11b, and I weight the pendulum stability very heavily. </p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/lqr.png" alt="" />
+                                    <h5>Add Imperfections and Adjust the Kalman Filter</h5>
+                                    <p class="text-justify">From the initial code, the process noise is set to diag[0.1, 0.1, 0.1, 0.1], and the measurement noise is set to [0.1].  These values allow our expected measured expected states, except for z, to converge even for an incorrect initial estimate of +0.5, as shown in the above section.</p>
+                                    <p class="text-justify">The effect of adding error in the initial state estimates is described in the above section.</p>
+                                    <h6>Motor Saturation and Deadband</h6>
+                                    <p class="text-justify">I added my saturation value (u_max = 2.792N) and deadband (u_min = 0.810N) to pendulumParam.py, and edited runSimulation.py such that u must be between these values.  I ran my code, and the controller is still able to stabilize the pendulum, however faills to reasonably track the z reference signal.   The Kalman Filter is still able to estimate the pendulum’s state, but I noticed the Kalman Filter functions better if I give it some error (+0.1)  in its initial estimate.  Adding some error prevents the desired control input from being in the deadband at the beginning.  Below is a plot the performance of adding saturation and deadband to u, as well as the desired and actual control inputs to the cart.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/sat_deadband.png" alt="" />
+                                    <p class="text-justify">Below is a video of the simulation:</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/KRQ0w9rD094" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify">Below is the code I added to runSimulation.py:</p>
+                                    <pre><code><p class="text-left"># calculate control inputs and include deadband and saturation
+u_des.append(float(-Kr.dot(mu[-1]-des_state)))
+if abs(u_des[-1]) &#60;= P.u_min: # deadband
+u.append(0)
+elif abs(u_des[-1]) >= P.u_max: #saturation
+u.append(np.sign(u_des[-1])*P.u_max)
+else:
+u.append(u_des[-1])</p></code></pre>
+                                    <h6>Measurement and Process Noise</h6>
+                                    <p class="text-justify">I then tried to add both sensor measurement noise and process noise by adding sigma parameters to pendulumParam.py.  These standard deviation values come from my experimental results in Lab 5 and Lab 6 for .  Process noise was estimated, but a standard deviation of 0.1 seems conservative for this case.  I added process noise from taking random samples of a normal distribution to dydt in pendulumNonlinearDynamics.py.  I also added the sensor noise to the sensor measurements, y_kf, in runSimulation.py.  I modified kalmanFilter.py to use the same sigma values specified in pendulumParam.py for sigma_u and sigma_n.  </p>
+                                    <p class="text-justify">Below we can see a plot of the performance with this noise added.  We can see that the system is even worse at tracking the z reference signal, but it is stable.  The Kalman Filter works to estimate the state well, as we can see that zdot, theta, and thetadot converge to their actual values, even after some error in their initial estimate.  We can also see that the Kalman Filter reduces the noise in the estimate by incorporating our control inputs, as the orange line (estimated state) is less noisy than the blue line (true state with noise).</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/noise.png" alt="" />
+                                    <p class="text-justify">Below is a video of the simulation with sensor and process noise added:</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/pXUQFZFftCs" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify">Below is the code I added to pendulumParam.py:</p>
+                                    <pre><code><p class="text-left">#Noise parameters of measurements
+sig_z = 0.005           # stddev of ToF measurement [m]
+sig_zdot = 0.005        # stddev of ToF measurement [m/s]
+sig_theta = 0.00174     # stddev of IMU [rad]
+sig_thetadot = 0.00262  # stddev of IMU [rad/s]
+
+#Process noise parameters
+sig_p = 0.01            # stddev of process noise</p></code></pre>
+                                    <p class="text-justify">Below is the code I added to pendulumNonlinearDynamics.py:</p>
+                                    <pre><code><p class="text-left">#with process noise:
+n_p = np.array([[np.random.normal(0, P.sig_p)], [np.random.normal(0, P.sig_p)], [np.random.normal(0, P.sig_p)], [np.random.normal(0, P.sig_p)]])
+dydt = dydt + n_p</p></code></pre>
+                                    <p class="text-justify">Below is the code I added to runSimulation.py:</p>
+                                    <pre><code><p class="text-left"># get sensor measurements
+n_y = P.C.dot(np.array([[np.random.normal(0, P.sig_z)], [np.random.normal(0, P.sig_zdot)], [np.random.normal(0, P.sig_theta)], [np.random.normal(0, P.sig_thetadot)]]))
+y_kf = P.C.dot(old_state) + n_y</p></code></pre>
+                                    <h6>Adjusting A- and B- Matrix</h6>
+                                    <p class="text-justify">I adjusted Ad and Bd in kalmanFilter.py by scaling the matriicies by a scalar value.  This effectively adds some error in our dynamic model of the system.  I attempted to adjust this scalar until I could find the boundary between instability and stability.  I found that when Ad and Bd were both increased by 0.03%, the system was slightly stable.  Below we can see a video and the performance of the cart with these adjustments to our kalman state matrices.  The floor length used by the cart is about 30 meters, which might be too much for the actual cart.  I noticed that as I increased the scaling factor, the length used by the cart increased, until the system was unstable.  </p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/ABStable.png" alt="" />
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/_PE0uHkD168" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                    <p class="text-justify">When Ad and Bd are increased by 0.04%, the system is unstable, as the pendulum falls over.  Below is the video and plot of the simulation.  The system is not able to react fast enough because the Kalman filter is not able to track the pendulum angle, theta.  The estimated theta and actual theta diverge as time increases.  This means that our system is extremely sensitive to changes in A and B, which could stem from incorrect parameters of the pendulum or limitations ini our dynamic model.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/ABUnstable.png" alt="" />
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/Fh9XgVsPYs0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>     
+                                    <h6>Sample Rate</h6>
+                                    <p class="text-justify">Finally, I tried to change the update time of the sensor and controller.  This effectively changes our sample rate of the sensor and the processor speed of the microcontroller.  The value we have been using is T_update = 0.001 seconds, which corresponds to 1000 Hz.  I found that I could decrease the update time to 0.04 seconds (25 Hz) before the system becomes unstable.  The system begins to have high frequency oscillations and appears to “tremor.”  This is because when we add a time delay to the system, we introduce large amounts of phase lag at high frequency.  For an update time of greater than 0.04 seconds, our phase margin of the system becomes negative.  Below is a video and plot of the simulation with this time delay.</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/DVtSYEYEMUw" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>   
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/timedelay.png" alt="" />
+                                    <h6>Real-life Practicality</h6>
+                                    <p class="text-justify">I believe all of these additions to the lab capture most of the differences between the ‘ideal’ model of the inverted pendulum, and the actual model of the inverted pendulum on the robot.  I believe my robot should be able to stabilize the pendulum, especially, if we make the reference z signal 0.  However, I am concerned with the differences between the dynamics of the robot, particularly the motors ability to exert force.  As we explored, changing the A and B matrices can easily make the system unstable.  I am not sure that the motors are linear, as we have assumed when mapping the values from the deadband to saturation.  Additionally, we have excluded any slip on the motors.  We may be able to improve this by wrapping another controller to the motors and an accelerometer mounted on the robot to ensure the robot exerts the desired force.  Additonallly, we would also need to fine tune our values for the sensor and process noise to match the actual robot.</p>
+                                    <h5>Change Your Measurement</h5>
+                                    <p class="text-justify">In order to incorporate both the ToF sensor used to measure z and the IMU sensor used to measure thetadot, with their corresponding sample rates, I first edited pendulumParam.py to have these parameters.  I edited the C matrix to a 4X2 matrix because we can now observe both z and thetadot.  This means that our system is fully observable, as the size of A is equivalent to the rank of our observabllility matrix.  I then edited runSimulation.py inside of the controlllerrr update loop to update z and thetadot according to their sample rate.</p>
+                                    <p class="text-justify">This worked well, and now, there is no longer a difference between the estimated z and actual z state because our system has feedback for the z term.  The Kalman filter is able to estimate our states, and our system was stable.  Although the system did not successfully track the reference signal, theta stays below 3 degrees from vertical.  I also plotted when samples are taken for the controller, IMU, and ToF sensor from 0 to 0.2 seconds to verify that the simulation is sampling correctly.</p>
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/sampling.png" alt="" />
+                                    <p class="text-justify">Below is a video and plot of the simulation:</p>
+                                    <iframe class="embed-responsive video" height="315" src="https://www.youtube.com/embed/hDuPfx3D_EQ" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>                                    
+                                    <img class="img-fluid rounded mb-5" src="assets/img/lab12/add_tof.png" alt="" />
+                                    <p class="text-justify">Edits to pendulumParam.py</p>
+                                    <pre><code><p class="text-left">T_update_controller = 0.001 # Controller update rate [s]
+T_update_tof = 0.1 # ToF update rate [s]
+T_update_imu = 0.01  # IMU update rate [s]
+C = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]])</p></code></pre>
+                                    <p class="text-justify">Edits to runSimulation.py</p>
+                                    <pre><code><p class="text-left">#Update controller and sensors every T_update seconds
+if (t % P.T_update_controller) &#60; dt: # controller update rate
+    # calculate control inputs and include deadband and saturation
+    u_des.append(float(-Kr.dot(mu[-1]-des_state)))
+    if abs(u_des[-1]) &#60;= P.u_min: # deadband
+        u.append(0)
+    elif abs(u_des[-1]) >= P.u_max: #saturation
+        u.append(np.sign(u_des[-1])*P.u_max)
+    else:
+        u.append(u_des[-1])
+    # get sensor measurements
+    n_y = P.C.dot(np.array([[np.random.normal(0, P.sig_z)], [np.random.normal(0, P.sig_zdot)], [np.random.normal(0, P.sig_theta)], [np.random.normal(0, P.sig_thetadot)]]))
+    y_kf = P.C.dot(old_state)
+    if (t % P.T_update_tof) &#60; dt: # tof update rate
+        y_kf[0,0] = P.C[0,0]*old_state[0,0] + n_y[0,0]
+        tof_times.append(t)
+    if (t % P.T_update_imu) &#60; dt: # imu update rate
+        y_kf[1,0] = P.C[0,3]*old_state[3,0] + n_y[1,0]
+        imu_times.append(t)
+    # estimate state from kalman filter
+    mu_out,sigma_out = kalmanFilter(mu[-1],sigma[-1],u[-1],y_kf)
+    # add stuff to lists for debugging
+    mu.append(mu_out)
+    sigma.append(sigma_out)
+    control_times.append(t)</p></code></pre>
                                     <button class="btn btn-primary" data-dismiss="modal">
                                         <i class="fas fa-times fa-fw"></i>
                                         Close Window
